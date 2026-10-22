@@ -1,226 +1,152 @@
-# Evidence — Issue #303: fix: qa finding: docs/implementation/PHASE4_BETA_REPORT.md, new 108 section (split from #214)
+# Evidence — Issue #316: fix: pilot-metrics.ts: major (Claude Opus 5.5·medium): metrics.runSuccessRate ? ... : "N/A" …
 
-Branch: `ai/303` (based on `main` at `264336fb`). Tested head SHA: `26c2e2535363aebcacea5a1e38aa543808b48c09`.
+Tested commit: `8ac9e870`
 
-All checks and tests were executed locally in the repo workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303`.
+All checks and tests were executed locally against commit `8ac9e870` in the workspace `/Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316`.
 
-## Skills Used
-- `systematic-debugging`: Identified root cause of QA Round 1 finding (regex matching Reconciliation paragraph instead of H3 review section) and isolated section slices.
-- `diagnosing-bugs`: Analyzed documentation inconsistency between `PHASE4_BETA_REPORT.md` and `FEDERATED_MFA.md`.
-- `verification-before-completion`: Executed all local checks (`pnpm typecheck`, `pnpm lint`, Vitest unit tests) and verified base-fail / head-pass behavior.
+## Acceptance Criteria and Verification
 
-## Originating Sentry Issue
-- Originating Sentry issue: None (QA / documentation consistency finding split from PR #214 / parent issue #108; not a runtime exception or crash).
-
-## UI Verification Note
-- UI: Non-user-facing change (documentation and unit test only; no UI components or browser flows modified; Playwright screenshots / RTL and LTR exempt).
-
-## Changed Covering Tests
-- `tests/unit/email-token-lock-order-docs.test.ts`: New unit regression test asserting documentation consistency across `docs/implementation/PHASE4_BETA_REPORT.md` and `docs/security/FEDERATED_MFA.md`.
-- `tests/integration/federated-lock-order.test.ts`: Reused `routeTransactions` export from `tests/integration/pg-lock-helpers.ts` (removed duplicate local implementation).
-- `tests/integration/account-delete-sso-lock-order.test.ts`: Documented #108 acceptance criteria and history in header comments.
-- `tests/integration/pg-lock-helpers.ts`: Documented #108 authoring and #37 reuse in header comments.
-
-## Acceptance Criteria and Verification Report
-
-| Req / AC | Description | Verification Method | Result | Exit Code |
+| Req / AC | Description | Verification Method | Result | Commit |
 |---|---|---|---|---|
-| AC1 | Explicit numbered Acceptance Criteria defined and mapped to verification results. | This verification report and evidence table. | Verified | 0 |
-| AC2 | In `docs/implementation/PHASE4_BETA_REPORT.md`, the new #108 section, H3 review section (~line 140), and Reconciliation paragraph all consistently describe `tests/integration/email-token-lock-order.test.ts` as having passed locally on 2026-10-08 against PostgreSQL (issue #45) and verified against throwaway databases for #109 (`flowline_test_109`) and #108 (`flowline_test_i108`), with CI as the gate. | Verified via doc inspection and unit regression test `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
-| AC3 | In `docs/security/FEDERATED_MFA.md`, the Email-token lock order checks and validation limits match this status (passed locally on 2026-10-08 against PostgreSQL). | Verified via doc inspection and unit regression test `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
-| AC4 | No conflicting claims: neither `docs/implementation/PHASE4_BETA_REPORT.md` nor `docs/security/FEDERATED_MFA.md` marks `tests/integration/email-token-lock-order.test.ts` as "not executed locally" or "unexecuted". | Regex assertion in `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
-| AC5 | QA Round 1 finding resolution: Anchor H3 assertion in `tests/unit/email-token-lock-order-docs.test.ts` specifically to the `## H3 security readiness review` section and require the phrase `'two-connection PostgreSQL test'` so it cannot match the Reconciliation paragraph. | Scoped assertion in `tests/unit/email-token-lock-order-docs.test.ts`. | PASSED (2/2) | 0 |
-| AC6 | Regression test demonstrates failure on base branch (`main`) and passes on head branch (`ai/303`). | Executed `tests/unit/email-token-lock-order-docs.test.ts` against base docs (FAILED, exit code 1) and head docs (PASSED, exit code 0). | RED on base, GREEN on head | 0 |
-| AC7 | Pre-push checks (`pnpm typecheck`, `pnpm lint`, and unit test suite) run clean with zero errors. | Executed `pnpm typecheck`, `pnpm lint`, and vitest test runs. | Clean | 0 |
-| AC8 | PR body states "Supersedes part of #214" and notes that E2E tests are not needed (pure documentation consistency and unit test, non-user-facing). | Verified in PR description and NEXT_ACTION.md. | Complete | 0 |
+| **AC1** | `formatMetricsAsMarkdown` in `scripts/pilot-metrics.ts` checks `metrics.runSuccessRate != null` rather than truthiness (`metrics.runSuccessRate ? ...`), formatting `runSuccessRate: 0` as `"0.0%"` instead of `"N/A"`. | Unit test `tests/unit/pilot-metrics.test.ts:65-67` (`shows a 0% success rate as 0.0%, not N/A (every finished run failed)`) and integration test `tests/integration/pilot-metrics.test.ts:498-507`. | 15/15 unit tests pass; 9/9 integration tests pass | `8ac9e870` |
+| **AC2** | When `metrics.runSuccessRate` is `null` (no finished runs in the query range), `formatMetricsAsMarkdown` outputs `"N/A"`. | Unit test `tests/unit/pilot-metrics.test.ts:69-71` (`formats null runSuccessRate as N/A (no finished runs in range)`) and integration test `tests/integration/pilot-metrics.test.ts:553-568`. | 15/15 unit tests pass; 9/9 integration tests pass | `8ac9e870` |
+| **AC3** | When `metrics.runSuccessRate` is a positive number (e.g. `0.8` or `1.0`), `formatMetricsAsMarkdown` formats as percentage with one decimal place (`"80.0%"`, `"100.0%"`). | Unit test `tests/unit/pilot-metrics.test.ts:73-83` (`formats 100% success rate as 100.0%` and `formats a fractional rate`). | 15/15 unit tests pass | `8ac9e870` |
+| **AC4** | A cohort where every finished run failed (`runSuccessRate: 0`) is covered end-to-end, asserting `| Run success rate | 0.0% |`. | Unit test `tests/unit/pilot-metrics.test.ts:100-123` (`collectPilotMetrics` mock returning `success_rate: 0`) and integration test `tests/integration/pilot-metrics.test.ts:498-507` querying PostgreSQL runs where all finished runs in range failed. | 15/15 unit tests pass; 9/9 integration tests pass | `8ac9e870` |
+| **AC5** | Regression test proves that the base truthiness check fails when `runSuccessRate === 0` (producing `"N/A"`), while the head `!= null` check passes (producing `"0.0%"`). | Unit regression test `tests/unit/pilot-metrics.test.ts:85-94` and negative control test run on base code (failing with exit code 1). | Failed on base (exit code 1); Passed on head (exit code 0) | `8ac9e870` |
+
+---
 
 ## Test Execution Evidence
 
-### 1. Regression Test Failure on Base (before fix)
+### 1. Regression Test Failure on Base (Truthiness Check)
+
+When `scripts/pilot-metrics.ts:263` used the truthiness check:
+```typescript
+`| Run success rate | ${metrics.runSuccessRate ? `${(Number(metrics.runSuccessRate) * 100).toFixed(1)}%` : "N/A"} |`,
 ```
-$ node -e '
-const cp = require("child_process");
-const fs = require("fs");
-const currentDocs = fs.readFileSync("docs/implementation/PHASE4_BETA_REPORT.md", "utf8");
-try {
-  const mainDocs = cp.execSync("git show main:docs/implementation/PHASE4_BETA_REPORT.md", { encoding: "utf8" });
-  fs.writeFileSync("docs/implementation/PHASE4_BETA_REPORT.md", mainDocs);
-  const out = cp.spawnSync("pnpm", ["exec", "vitest", "run", "tests/unit/email-token-lock-order-docs.test.ts"], { encoding: "utf8" });
-  console.log("Exit code on base docs:", out.status);
-  console.log(out.stdout);
-} finally {
-  fs.writeFileSync("docs/implementation/PHASE4_BETA_REPORT.md", currentDocs);
-}
-'
 
-Exit code on base docs: 1
+Unit test run on base truthiness check:
+```
+$ nice -n 10 pnpm vitest run tests/unit/pilot-metrics.test.ts --maxWorkers=2
+ FAIL  |unit| tests/unit/pilot-metrics.test.ts > pilot-metrics: formatMetricsAsMarkdown > AC1 & AC4: shows a 0% success rate as 0.0%, not N/A (every finished run failed)
+AssertionError: expected '# Pilot Metrics: 2026-10-16 to 2026-1…' to contain '| Run success rate | 0.0% |'
 
- RUN  v5.0.2 /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
+- Expected
++ Received
 
- ❯ |unit| tests/unit/email-token-lock-order-docs.test.ts (2 tests | 2 failed) 5ms
-   ❯ docs consistency: email-token-lock-order test execution status (2)
-     × never marks tests/integration/email-token-lock-order.test.ts as unexecuted or not executed 4ms
-     × consistently records email-token-lock-order.test.ts passed locally against PostgreSQL across docs 1ms
+- | Run success rate | 0.0% |
++ | Run success rate | N/A |
 
+ ❯ tests/unit/pilot-metrics.test.ts:66:80
  Test Files  1 failed (1)
-      Tests  2 failed (2)
-   Duration  375ms
+      Tests  1 failed | 10 passed (11)
+Exit code: 1
 ```
 
-### 2. Regression Test Passing on Head (after fix)
+Integration test run on base truthiness check:
 ```
-$ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts
+$ nice -n 10 env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test_pilot pnpm vitest run tests/integration/pilot-metrics.test.ts --maxWorkers=2
+ FAIL  |integration| tests/integration/pilot-metrics.test.ts > pilot-metrics > reports 0.0% run success rate when all finished runs in range failed
+AssertionError: expected '# Pilot Metrics: 2001-03-19 to 2001-0…' to contain '| Run success rate | 0.0% |'
 
- RUN  v5.0.2 /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
+- Expected
++ Received
 
- ✓ |unit| tests/unit/email-token-lock-order-docs.test.ts (2 tests) 2ms
-   ✓ docs consistency: email-token-lock-order test execution status (2)
-     ✓ never marks tests/integration/email-token-lock-order.test.ts as unexecuted or not executed 1ms
-     ✓ consistently records email-token-lock-order.test.ts passed locally against PostgreSQL across docs 0ms
+- | Run success rate | 0.0% |
++ | Run success rate | N/A |
+
+ ❯ tests/integration/pilot-metrics.test.ts:506:22
+ Test Files  1 failed (1)
+      Tests  1 failed | 8 passed (9)
+Exit code: 1
+```
+
+### 2. Passing Tests on Head
+
+Unit tests (`tests/unit/pilot-metrics.test.ts`):
+```
+$ nice -n 10 pnpm vitest run tests/unit/pilot-metrics.test.ts --maxWorkers=2
+ ✓ |unit| tests/unit/pilot-metrics.test.ts (15 tests) 316ms
+   ✓ pilot-metrics: parseRange (6)
+     ✓ reads an inclusive UTC day range 1ms
+     ✓ rejects ["--from","2026-10-16"] (missing --to) with a UsageError 0ms
+     ✓ rejects ["--to","2026-10-16"] (missing --from) with a UsageError 0ms
+     ✓ rejects ["--from","2026-10-16","--to","tomorrow"] (not a date) with a UsageError 0ms
+     ✓ rejects ["--from","2026-02-30","--to","2026-03-05"] (nonexistent day JS would roll over) with a UsageError 0ms
+     ✓ rejects ["--from","2026-10-23","--to","2026-10-16"] (reversed range) with a UsageError 0ms
+   ✓ pilot-metrics: formatMetricsAsMarkdown (6)
+     ✓ prints every row on an empty range without crashing 1ms
+     ✓ AC1 & AC4: shows a 0% success rate as 0.0%, not N/A (every finished run failed) 0ms
+     ✓ AC2: formats null runSuccessRate as N/A (no finished runs in range) 0ms
+     ✓ AC3: formats 100% success rate as 100.0% (all finished runs succeeded) 0ms
+     ✓ AC3: formats a fractional rate and says plainly what is not recorded 0ms
+     ✓ AC5: proves regression where truthiness check treats 0 as falsy returning N/A 0ms
+   ✓ pilot-metrics: collectPilotMetrics (1)
+     ✓ AC4: propagates a 0 success rate from run metrics query to PilotMetrics 0ms
+   ✓ pilot-metrics: CLI (2)
+     ✓ detects direct execution by real path, even for relative paths and spaces 0ms
+     ✓ exits non-zero with a usage message on stderr for a reversed range, before touching the DB 313ms
 
  Test Files  1 passed (1)
-      Tests  2 passed (2)
-   Duration  153ms
+      Tests  15 passed (15)
+   Start at  01:23:29
+   Duration  782ms
+Exit code: 0
 ```
 
-### 3. Related Ledger & Documentation Unit Tests Passing
+Integration tests (`tests/integration/pilot-metrics.test.ts`):
 ```
-$ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/docs-index.test.ts
+$ nice -n 10 env FLOWLINE_ENV=test DATABASE_URL=postgres://abdelrahmanahmed@localhost:5432/flowline_test_pilot pnpm vitest run tests/integration/pilot-metrics.test.ts --maxWorkers=2
+ ✓ |integration| tests/integration/pilot-metrics.test.ts (9 tests) 106ms
+   ✓ pilot-metrics (9)
+     ✓ counts sign-ups once per user and takes the median of each user's first verification 9ms
+     ✓ reports run success rate and p95 queue-to-start over finished runs 3ms
+     ✓ reports 0.0% run success rate when all finished runs in range failed 3ms
+     ✓ counts onboarding + workspace within 24h of sign-up, excluding skippers and earlier cohorts 4ms
+     ✓ counts a first publication within 3 days of sign-up from immutable publish versions 2ms
+     ✓ counts accepted webhook runs, scheduled runs and decided workflow approvals in range 3ms
+     ✓ counts a webhook trigger_ref that produced two runs as one duplicate (and 0 otherwise) 14ms
+     ✓ prints every metric as 0 or N/A on a range with no data 3ms
+     ✓ formats metrics as a Markdown table with no connection string 2ms
 
- RUN  v5.0.2 /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
-
- ✓ |unit| tests/unit/email-token-lock-order-docs.test.ts (2 tests) 2ms
- ✓ |unit| tests/unit/docs-index.test.ts (4 tests) 4ms
- ✓ |unit| tests/unit/email-token-lock-order.test.ts (11 tests) 5ms
-
- Test Files  3 passed (3)
-      Tests  17 passed (17)
-   Duration  447ms
+ Test Files  1 passed (1)
+      Tests  9 passed (9)
+   Start at  01:23:30
+   Duration  2.09s
+Exit code: 0
 ```
 
-### 4. TypeScript Typecheck
+### 3. Typecheck and Lint
+
+Typecheck:
 ```
 $ pnpm typecheck
-> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
+> flowline@0.1.0 typecheck /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316
 > tsc --noEmit
-
 Exit code: 0
 ```
 
-### 5. ESLint
+Lint:
 ```
 $ pnpm lint
-> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-303
+> flowline@0.1.0 lint /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316
 > eslint . --cache --cache-location node_modules/.cache/eslint/
-
 Exit code: 0
 ```
 
-### 6. CI Docs Check Simulation
+Evidence secrets scan:
 ```
-$ node -e '
-const cp = require("child_process");
-const files = cp.execSync("git diff --name-only main..HEAD", { encoding: "utf8" }).trim().split("\n");
-const pages = [files.map(f => ({ filename: f }))];
-const res = cp.spawnSync(process.execPath, ["scripts/ci/docs-check.mjs"], { input: JSON.stringify(pages), encoding: "utf8", env: { ...process.env, WAIVED: "false", PR_BODY: "" } });
-console.log("Exit:", res.status, "Output:\n" + res.stdout);
-'
-
-Exit: 0 Output:
-## Docs check
-
-Code files changed: 4
-Docs changed: 3
-- "docs/implementation/PHASE4_BETA_REPORT.md"
-- "docs/security/FEDERATED_MFA.md"
-- "NEXT_ACTION.md"
+$ pnpm check:evidence
+> flowline@0.1.0 check:evidence /Users/abdelrahmanahmed/agents/work.noindex/impl/FlowLine_Web-316
+> node scripts/check-evidence-secrets.mjs
+check-evidence-secrets: 0 local secret value(s) checked across 174 file(s); 0 hit(s)
+Exit code: 0
 ```
 
-## QA Review Findings — Root-Cause Analysis and Verification
+---
 
-### QA Round 1 Finding (`494f1c201fd5`)
-`tests/unit/email-token-lock-order-docs.test.ts:25-27` (on commit `4b78381`): the H3 assertion
-`/tests\/integration\/email-token-lock-order\.test\.ts.*passed locally on 2026-10-08 against PostgreSQL/`
-matched against the **entire** `betaReport` string, so it was also satisfied by the Reconciliation
-paragraph (line 128 in `PHASE4_BETA_REPORT.md`), not only the H3 section (line 140).
-
-### Root Cause
-The original assertion used `expect(betaReport).toMatch(...)` — a whole-document match.
-Because the Reconciliation paragraph (in `## Account deletion vs the user's own SSO sign-in`,
-line 122) **also** contains `email-token-lock-order.test.ts … passed locally on 2026-10-08
-against PostgreSQL`, the regex was ambiguous: it did not pin the H3 paragraph.
-
-### Fix (commit `26c2e253`, file `tests/unit/email-token-lock-order-docs.test.ts:24-30`)
-1. **Section scoping**: `betaReport.split("## H3 security readiness review")[1]?.split(/^## /m)[0]`
-   extracts only the text between `## H3 security readiness review` and the next `## ` heading.
-   The Reconciliation paragraph (in a different `##` section) is excluded.
-2. **Unique anchor**: the regex now requires `two-connection PostgreSQL test` — a phrase present
-   only in the H3 section, never in the Reconciliation paragraph.
-3. Applied the same section-scoping to the `#108` and `#109` assertions (lines 33-47).
-
-### QA Round 2 Verification (`742158b6c8c2` & `fb7fc4f024d6`)
-On commit `26c2e253`:
-- Finding `742158b6c8c2` (`docs/implementation/PHASE4_BETA_REPORT.md`): Verified that H3 review section (~line 140) states that `tests/integration/email-token-lock-order.test.ts` passed locally on 2026-10-08 against PostgreSQL (issue #45; also verified locally on #108 and #109), and CI is the gate, consistent with `docs/security/FEDERATED_MFA.md`.
-- Finding `fb7fc4f024d6` (`tests/unit/email-token-lock-order-docs.test.ts`): Verified that `tests/unit/email-token-lock-order-docs.test.ts` asserts this status with scoped assertions that fail on base (`main`) and pass on head (`ai/303`).
-
-### Proof the fix is correct
-```
-# H3 section does NOT include Reconciliation paragraph:
-$ node -e "
-const fs = require('fs');
-const b = fs.readFileSync('docs/implementation/PHASE4_BETA_REPORT.md','utf8');
-const h3 = b.split('## H3 security readiness review')[1]?.split(/^## /m)[0] ?? '';
-console.log('H3 includes Reconciliation:', h3.includes('Reconciliation 2026-10-14'));
-console.log('H3 matches regex:', /two-connection PostgreSQL test/.test(h3));
-"
-H3 includes Reconciliation: false
-H3 matches regex: true
-```
-
-### Re-verification (session 2026-10-20T00:03 UTC+3)
-```
-# Regression on base (main docs):
-Exit code on base docs: 1
- ❯ |unit| tests/unit/email-token-lock-order-docs.test.ts (2 tests | 2 failed) 6ms
-     × never marks tests/integration/email-token-lock-order.test.ts as unexecuted or not executed 5ms
-     × consistently records email-token-lock-order.test.ts passed locally against PostgreSQL across docs 1ms
- Test Files  1 failed (1)
-      Tests  2 failed (2)
-
-# All pass on head (ai/303 docs):
-$ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts
- ✓ |unit| tests/unit/email-token-lock-order-docs.test.ts (2 tests) 2ms
-     ✓ never marks tests/integration/email-token-lock-order.test.ts as unexecuted or not executed 1ms
-     ✓ consistently records email-token-lock-order.test.ts passed locally against PostgreSQL across docs 0ms
- Test Files  1 passed (1)
-      Tests  2 passed (2)
-
-# Related tests (17/17):
-$ pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/docs-index.test.ts --maxWorkers=2
- Test Files  3 passed (3)
-      Tests  17 passed (17)
-
-# Pre-push:
-$ pnpm typecheck  -> Exit code 0
-$ pnpm lint       -> Exit code 0
-```
-
-### Rebase & Merge Verification on Latest `origin/main` (2026-10-20T07:24 UTC+3)
-Merged latest `origin/main` (commits up to `116935af` including #214 and `9a345f18` #316) into `ai/303`. Resolved all conflicts cleanly:
-- `NEXT_ACTION.md`: Kept both issue #303 and issue #316 handoffs intact.
-- `PHASE4_BETA_REPORT.md`: Preserved reconciled status for `email-token-lock-order.test.ts` (passed locally on 2026-10-08 against PostgreSQL, verified on #108 and #109) and incorporated new pilot-metrics section from main.
-- `FEDERATED_MFA.md`: Kept evidence link and local-pass status from origin/main.
-- `tests/integration/account-delete-sso-lock-order.test.ts`: Preserved clean concise history comment from main.
-
-### CTO Rework Resolution on PR #308 (2026-10-20)
-Addressed CTO rework review finding on PR #308 regarding internal contradiction in `docs/implementation/PHASE4_BETA_REPORT.md`:
-1. In `docs/implementation/PHASE4_BETA_REPORT.md` line 124, restored attribution to issue #109 (PR #216, commit `d86fb7d7`) for account deletion vs SSO lock ordering ('lock the user row and write its account.deleted audit rows before locking workspaces FOR UPDATE').
-2. In line 126, restored pre-fix references to consistently point to pre-d86fb7d7 / parent `83c7bb8e` rather than pre-#65.
-3. Verified clean execution of `tests/unit/email-token-lock-order-docs.test.ts` (2/2 pass) and all pre-push checks (`pnpm typecheck`, `pnpm lint`).
-
-Verification on merged working tree:
-- `pnpm typecheck` -> Exit code 0
-- `pnpm lint` -> Exit code 0
-- `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts` -> 2 files, 13 passed (13) -> Exit code 0
-- `node scripts/ci/docs-check.mjs` (simulated CI check) -> Exit code 0
-
+## Originating Issue & Sentry
+- **Originating review finding:** PR #170 discussion `r4241760623` (finding `6bffc68a8711`) by Claude Opus 5.5: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/170#discussion_r4241760623
+- **Originating Sentry issue:** None (internal review finding split from PR #170; parent issue #143)
+- **E2E Waiver:** `E2E: not needed — read-only internal ops CLI script, no user-facing UI or endpoints`
+- **Linkage:** Supersedes part of #170. Refs #143.
