@@ -33,7 +33,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const cancel = () => {
-    requestRef.current = 0;
+    requestRef.current += 1;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
