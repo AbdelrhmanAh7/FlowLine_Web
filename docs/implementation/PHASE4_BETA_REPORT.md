@@ -1,5 +1,15 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Issue #326 — fix: failing check `gate` (split from #244, template: 'Deal won → Mizano quote') — 2026-10-22
+
+Supersedes part of PR #244. Added the 'Deal won → Mizano quote' design template (`deal-won-mizano-quote`) with an approval step on `mizano.create_customer`.
+Resolved root causes of the `gate` check failure on commit `7634b2c` of PR #244:
+- In `src/app/w/[slug]/templates/page.tsx`, avoided changing the accessible name of the "Use template" button via `aria-label`, which previously caused Chromium Playwright fast-tier `@critical` tests (`e2e/phase2.spec.ts`) to fail.
+- Kept standard accessible headings/paragraphs for template card titles without empty `<button>` wrappers.
+- Preserved strict workspace tenancy and isolation in `src/server/access.ts` without test-mode fallback bypasses.
+- Ensured Arabic template name uses standard arrow `→` matching English (`صفقة مكسوبة → عرض سعر Mizano`).
+- Verified with unit tests (`tests/unit/deal-won-mizano-template.test.ts`), integration worker tests (`tests/integration/deal-won-mizano-approval.test.ts`), and natural-language e2e-army tests (`e2e-army/147-mizano-create-customer-and-quote.e2e.ts`).
+
 
 ## Pilot E2E failure corrections — 2026-10-15
 
