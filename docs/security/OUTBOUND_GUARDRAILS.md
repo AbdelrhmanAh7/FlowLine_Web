@@ -6,7 +6,7 @@
 | Part of the brief | State |
 |---|---|
 | Volume caps | Delivered as a per-connection, per-action cap (below) |
-| Audit view | Delivered: `outbound_capped` appears in the run inspector's event log |
+| Audit view | Delivered: `outbound_capped` appears in the run inspector's event log **and the audit log (Settings → Audit)** |
 | Approval before high-volume broadcasts | Not delivered. Only the existing per-action `requireApproval` / `sensitive` approval exists. Threshold-based approval is a follow-up issue (CTO decision on #165) |
 | Scoped node credentials | Not delivered. Connections stay workspace-scoped and cannot be limited to specific nodes |
 | Per-destination caps | Not delivered (CTO decision: connection + action is enough for the first version) |
@@ -21,6 +21,7 @@
 - The check runs after connection validation (`getRuntimeCredentials` returns `CONNECTION_WORKSPACE` for a connection of another workspace, `CONNECTION_MISSING` if absent) and after the approval gate. A step waiting for a human therefore uses no budget and a rejected connection never touches a counter.
 - A refused send throws the retryable `SEND_RATE_LIMITED` and logs one `outbound_capped` run event with `action` and `limit` only (no payload, no destination).
 - The run inspector (`src/app/w/[slug]/runs/inspector.tsx`) renders run events through `runEvent.<type>`; `outbound_capped` has labels in `src/i18n/messages/en.json` and `ar.json`.
+- The audit log (`src/app/w/[slug]/settings/audit-log.tsx`) merges `outbound_capped` run events (fetched from `/api/workspaces/[wid]/audit/guardrails`) with audit events, showing them with the label "system (guardrail)" / "النظام (حاجز حماية)" in English/Arabic.
 - The key is listed in the caller audit of [codeql-triage-hashing.md](codeql-triage-hashing.md).
 
 ## Open debt
@@ -36,7 +37,8 @@
   - a second send over a cap of 1 fails with `SEND_RATE_LIMITED` and logs exactly one `outbound_capped`;
   - a flow whose `maxSendsPerMinute` is out of range (0) is refused at enqueue with 422 `INVALID_FLOW` / `INVALID_SEND_LIMIT` (the worker clamp to 1..1000 is defence in depth for stored versions, and has no direct test);
   - a connection from another workspace fails with `CONNECTION_WORKSPACE` and logs no `outbound_capped`.
-- `e2e-army/165-outbound-send-cap.e2e.ts`: request-level guard only (an anonymous run start is refused). It does not exercise the cap, because the hub's throwaway stack has no seeded connection to send through; the cap is proven by the integration tests above.
+- `e2e-army/200-route-error-headers.e2e.ts`: request-level guard only (an anonymous run start is refused, tagged `@issue-165 AC1`). It does not exercise the cap, because the hub's throwaway stack has no seeded connection to send through; the cap is proven by the integration tests above.
+- Audit log integration: `outbound_capped` events are fetched via `/api/workspaces/[wid]/audit/guardrails` and merged with audit events in the UI, with i18n labels.
 
 ## References
 
