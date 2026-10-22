@@ -83,9 +83,7 @@ const stackPids = () => {
       const cmd = readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0").join(" ");
       if (!/dev-test\.mjs|worker\/index\.ts.*--flowline-test-stack=\d+|e2e\/fakes\/|next (start|dev)|next-server/.test(cmd)) continue;
       const environment = readFileSync(`/proc/${pid}/environ`, "utf8").split("\0");
-      if (environment.includes(mine) || (single && !environment.some((entry) => entry.startsWith("FLOWLINE_TEST_PORT=")) && /worker\/index\.ts/.test(cmd))) {
-        pids.push(validatePid(pid));
-      }
+      if (environment.includes(mine) || (single && !environment.some((entry) => entry.startsWith("FLOWLINE_TEST_PORT=")) && /worker\/index\.ts/.test(cmd))) pids.push(validatePid(pid));
     } catch {
       /* gone, or not ours */
     }

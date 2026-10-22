@@ -20,9 +20,7 @@ describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
   it("resolveTlsPolicy keeps certificate validation ON unless BETA_STACK_ALLOW_INSECURE=1 with loopback", () => {
     expect(resolveTlsPolicy({}, "https://localhost")).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
     for (const h of ["https://beta.example.com", "https://93.184.216.34"]) expect(resolveTlsPolicy({ BETA_STACK_ALLOW_INSECURE: "1" }, h)).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
-    for (const h of ["https://localhost", "https://127.0.0.1:443", "https://[::1]"]) {
-      expect(resolveTlsPolicy({ BETA_STACK_ALLOW_INSECURE: "1" }, h)).toEqual({ rejectUnauthorized: false, allowInsecure: true, env: { NODE_TLS_REJECT_UNAUTHORIZED: "0" } });
-    }
+    for (const h of ["https://localhost", "https://127.0.0.1:443", "https://[::1]"]) expect(resolveTlsPolicy({ BETA_STACK_ALLOW_INSECURE: "1" }, h)).toEqual({ rejectUnauthorized: false, allowInsecure: true, env: { NODE_TLS_REJECT_UNAUTHORIZED: "0" } });
   });
 
   it("buildVerifyArgs returns stable ordered argv array and carries no --insecure in default path", () => {
@@ -30,6 +28,12 @@ describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
     expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]);
     expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://127.0.0.1:443")).toEqual(["--base", "https://127.0.0.1:443", "--insecure-local"]);
     expect(buildVerifyArgs({}, "https://localhost", { out: "artifacts/test" })).toEqual(["--base", "https://localhost", "--out", "artifacts/test"]);
+  });
+
+  it("exported helpers are pure functions and script import causes zero side effects", () => {
+    expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
+    expect(isLoopbackTarget("127.0.0.1")).toBe(true);
+    expect(resolveTlsPolicy({}, "https://localhost")).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
   });
 
   it("alert #8 is documented in triage doc and code", () => {
@@ -44,8 +48,7 @@ describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
       expect(res.status).toBe(1);
       expect(res.stderr).toContain("Refusing to disable certificate validation");
     }
-    const resFlag = spawnSync(process.execPath, [script, "--base", "https://example.com", "--insecure-local"], { env: process.env, encoding: "utf8" });
-    expect(resFlag.status).toBe(1);
-    expect(resFlag.stderr).toContain("Refusing to disable certificate validation");
+    const rf = spawnSync(process.execPath, [script, "--base", "https://example.com", "--insecure-local"], { env: process.env, encoding: "utf8" });
+    expect(rf.status).toBe(1); expect(rf.stderr).toContain("Refusing to disable certificate validation");
   }, 10000);
 });

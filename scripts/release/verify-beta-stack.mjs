@@ -22,9 +22,7 @@ export function isLoopbackTarget(u) {
 
 export function resolveTlsPolicy(env = process.env, targetUrl = "https://localhost") {
   const allow = Boolean((env?.BETA_STACK_ALLOW_INSECURE === "1" || env?.BETA_STACK_ALLOW_INSECURE === 1) && isLoopbackTarget(targetUrl));
-  return allow
-    ? { rejectUnauthorized: false, allowInsecure: true, env: { NODE_TLS_REJECT_UNAUTHORIZED: "0" } }
-    : { rejectUnauthorized: true, allowInsecure: false, env: {} };
+  return allow ? { rejectUnauthorized: false, allowInsecure: true, env: { NODE_TLS_REJECT_UNAUTHORIZED: "0" } } : { rejectUnauthorized: true, allowInsecure: false, env: {} };
 }
 
 export function buildVerifyArgs(env = process.env, targetUrl = "https://localhost", { out } = {}) {

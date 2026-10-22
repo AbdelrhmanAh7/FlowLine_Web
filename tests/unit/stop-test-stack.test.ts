@@ -38,19 +38,20 @@ describe("stop-test-stack validators and argv builders (alerts #4 & #13)", () =>
     expect(() => buildStackArgs("stack; rm -rf /")).toThrow();
   });
 
+  it("exported helpers are pure functions with zero execution side effects", () => {
+    expect(validatePid(1234)).toBe(1234);
+    expect(buildKillArgs(1234)).toEqual(["-9", "1234"]);
+    expect(buildLsofArgs(3100)).toEqual(["-ti", "tcp:3100"]);
+  });
+
   it.each(["1234; rm -rf /", "$(whoami)"])("exits 1 on PID env %j with stderr validation error", (badPid) => {
     const res = spawnSync(process.execPath, [script], { env: { ...process.env, FLOWLINE_TEST_PID: badPid }, encoding: "utf8" });
-    expect(res.status).toBe(1);
-    expect(res.stderr).toContain("Invalid PID");
+    expect(res.status).toBe(1); expect(res.stderr).toContain("Invalid PID");
   }, 10000);
 
   it("does not fail or kill when ambient generic PID or STACK_NAME are set", () => {
-    const res = spawnSync(process.execPath, [script, "--port=9999"], {
-      env: { ...process.env, PID: "1234; rm -rf /", STACK_NAME: "ambient stack with spaces" },
-      encoding: "utf8",
-    });
-    expect(res.status).toBe(0);
-    expect(res.stderr).not.toContain("Invalid");
+    const res = spawnSync(process.execPath, [script, "--port=9999"], { env: { ...process.env, PID: "1234; rm -rf /", STACK_NAME: "ambient stack with spaces" }, encoding: "utf8" });
+    expect(res.status).toBe(0); expect(res.stderr).not.toContain("Invalid");
   }, 10000);
 
   it("scripts contain no shell exec string, no shell: true, and no .replace sanitization", () => {

@@ -22,6 +22,7 @@ Scope: the three CodeQL alerts under `scripts/` (#8, #13, #4). All three are fix
 2. Discrete argv subprocess calls via `execFileSync`: `buildLsofArgs`, `buildKillArgs`, `buildFuserArgs`, and `buildPowerShellArgs`.
 3. Execution guarded with `import.meta.url === pathToFileURL(process.argv[1]).href`; helpers are pure functions for testability without side effects.
 4. Input validation for `FLOWLINE_TEST_PID` fails closed on injection payloads without killing arbitrary ambient PIDs. Generic ambient `PID` and `STACK_NAME` are ignored.
+5. Surface area & safety: Exported helpers in both scripts are pure synchronous validators/builders without side effects or child processes; importing the scripts does not trigger CLI execution.
 
 ## Verification
 
