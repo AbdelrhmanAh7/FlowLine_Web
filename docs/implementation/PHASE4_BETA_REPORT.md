@@ -361,14 +361,20 @@ Subtask of #149.
 
 ## Flow list invariance test verification (issue #375) — 2026-10-21
 
-Resolved CodeRabbit blocker finding (discussion `r4337196672`) split from PR #362.
-Previously, historical AC2 asserted "the flow list did not change" relying solely on alert visibility,
-without capturing flow count or IDs before the invalid creation/import attempt and comparing after.
-Added deterministic e2e test `@issue-375 AC1` to `e2e-army/117-flows-list-dashboard.e2e.ts` capturing
-flow count and IDs before an invalid creation attempt and verifying that after rejection, flow count and IDs
-are strictly unchanged (`toHaveLength` and `toEqual`).
-Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (4/4 passing) proving negative
-control failure on historical PR #362 test code and clean verification on head.
+Resolved CodeRabbit blocker finding (discussion `r4337196672`) and related parent review findings split from PR #362:
+1. Flow list invariance: Previously, historical AC2 asserted "the flow list did not change" relying solely on alert visibility,
+   without capturing flow count or IDs before the invalid creation/import attempt and comparing after. Added deterministic
+   e2e test `@issue-375 AC1` to `e2e-army/117-flows-list-dashboard.e2e.ts` capturing flow count and IDs before an invalid
+   creation attempt and verifying that after rejection (400 UNKNOWN_TEMPLATE, 400 VALIDATION), flow count and IDs are strictly
+   unchanged (`toHaveLength` and `toEqual`).
+2. Negative control guard: Added regression unit test guard `tests/unit/flows-list-ac2-guard.test.ts` (13/13 passing) proving
+   negative control failure on historical PR #362 test code (missing snapshot, missing comparison, alert-only assertion,
+   bypassing upload button wiring, and missing SETUP_REQUIRED assertion) and clean verification on head.
+3. Workspace placeholder slug rejection (`src/server/access.ts`): `requireWorkspace` and `requireWorkspaceBySlug` explicitly
+   validate against and reject placeholder slugs/wids (e.g. `{slug}`, `slug`, `{wid}`) with 404 HttpError, preventing silent
+   creation/selection in an arbitrary workspace.
+4. Safe slug decoding (`src/app/w/[slug]/layout.tsx`): Wrapped `decodeURIComponent(slug)` in try/catch to gracefully return
+   404 on malformed URI escapes (such as `%E0%A4%A`) rather than an unhandled 500 `URIError`, with no placeholder fallback.
 Supersedes part of #362.
 
 

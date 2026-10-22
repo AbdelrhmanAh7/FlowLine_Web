@@ -51,12 +51,29 @@ export async function requireUser(): Promise<CurrentUser> {
   return user;
 }
 
+const PLACEHOLDER_SLUGS = new Set([
+  "{slug}",
+  "[slug]",
+  ":slug",
+  "slug",
+  "{wid}",
+  "[wid]",
+  ":wid",
+  "wid",
+]);
+
+/** Returns true if the identifier is a template/URL placeholder string. */
+export function isPlaceholderSlug(value: string | undefined | null): boolean {
+  if (!value) return false;
+  return PLACEHOLDER_SLUGS.has(value.trim().toLowerCase());
+}
+
 /**
  * Resolves a workspace the user belongs to. Non-members get 404 (not 403) so
  * workspace existence isn't leaked across tenants.
  */
 export async function requireWorkspace(user: CurrentUser, workspaceId: string, minRole: Need = "viewer") {
-  if (!isUuid(workspaceId)) throw notFound("Workspace not found");
+  if (!isUuid(workspaceId) || isPlaceholderSlug(workspaceId)) throw notFound("Workspace not found");
   const [row] = await db
     .select({ workspace: schema.workspace, role: schema.workspaceMember.role })
     .from(schema.workspaceMember)
@@ -68,6 +85,7 @@ export async function requireWorkspace(user: CurrentUser, workspaceId: string, m
 }
 
 export async function requireWorkspaceBySlug(user: CurrentUser, slug: string) {
+  if (isPlaceholderSlug(slug)) return null;
   const [row] = await db
     .select({ workspace: schema.workspace, role: schema.workspaceMember.role })
     .from(schema.workspace)
