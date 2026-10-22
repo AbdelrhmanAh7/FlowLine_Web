@@ -359,4 +359,15 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Deal won → Mizano quote template & gallery card fix (issue #409) — 2026-10-22
+
+Resolved blocker finding from PR #328 (parent #326) where E2E tests in `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` depended on a gallery card with `data-testid="template-deal-won-mizano-quote"`, EN/AR names, and canvas node "Mizano — Create customer (needs approval)", but template was missing from `src/engine/design-templates.ts` and `designTemplates.deal-won-mizano-quote` strings were missing from `src/i18n/messages/{en,ar}.json`.
+- Registered `deal-won-mizano-quote` in `DESIGN_TEMPLATES` in `src/engine/design-templates.ts` with helper functions (`templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, `heldBackDesignTemplates`).
+- Added complete `designTemplates.deal-won-mizano-quote` entries in `src/i18n/messages/en.json` and `src/i18n/messages/ar.json`.
+- Added unit tests in `tests/unit/deal-won-mizano-template.test.ts` (8/8 pass) covering wiring, action registry verification, approval pause, rejection, and numerical formatting.
+- Demonstrated regression test failure on base in `tests/unit/i18n-content-text.test.ts` (missing Arabic step labels), passing on head (43/43 pass).
+- Added e2e-army tests to `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` (@issue-409 AC1, AC2, AC3).
+- Supersedes part of #328.
+
+
 
