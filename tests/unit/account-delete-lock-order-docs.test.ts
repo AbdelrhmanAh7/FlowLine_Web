@@ -40,6 +40,14 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     expect(section).toMatch(/pre-#65/);
     expect(section).not.toMatch(/pre-#109/);
 
+    // Explains that 83c7bb8e already contained user-first locking from PR #65
+    expect(section).toMatch(/83c7bb8e[\s\S]*?already contained the user-first locking/i);
+
+    // Records decision from PR #214 without asserting unbacked CTO authorization
+    expect(section).toMatch(/As recorded in PR #214/i);
+    expect(section).not.toMatch(/As confirmed by the CTO/i);
+    expect(section).not.toMatch(/Per CTO instructions/i);
+
     // Reconciliation note asserts status agreement rather than "exact wording"
     expect(section).toMatch(/agrees on the status/i);
     expect(section).not.toMatch(/exact wording/i);
@@ -87,6 +95,10 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     expect(testFile).toMatch(
       /Against the old deletion order the SSO-first case is expected to fail: deletion\s*\/\/\s*would wait at `delete from "user"` holding W, and on release the SSO audit insert would deadlock with it \(40P01\)\./
     );
+
+    // Records history from PR #214 without asserting unbacked CTO authorization
+    expect(testFile).toMatch(/As recorded in PR #214/i);
+    expect(testFile).not.toMatch(/Per CTO directive/i);
   });
 
   it("docs/evidence/315/EVIDENCE.md and artifacts/phase-4/issue-315/EVIDENCE.md track AC5 noting no external record exists for the CTO decision and record real commit SHA", () => {

@@ -30,7 +30,7 @@ import { blockedByObserver, connect, pauseAfter, routeTransactions } from "./pg-
 // Acceptance criterion & history: This test was authored for #108 to replicate and verify the deadlock scenario.
 // Issue #45 (PR #65) removed the deadlock by locking the user row before the workspaces in consumeAccountToken("delete").
 // PR #216 (#109) subsequently implemented the audit-before-workspace reordering and incorporated this test and helper
-// verbatim to verify regression safety before PR #214 landed. Per CTO directive (2026-10-13, head b9ae3ee), on the
+// verbatim to verify regression safety before PR #214 landed. As recorded in PR #214 (head b9ae3ee), on the
 // merged tree where both changes are present on main, this test serves as the regression baseline verifying that both
 // orders complete without deadlock (2/2 pass). The pre-#65 deadlock hazard it guards against is the circular wait
 // in the SSO-first case described above.
