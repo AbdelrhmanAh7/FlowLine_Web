@@ -169,8 +169,8 @@ test(
 );
 
 test(
-  "@issue-165 AC1: an anonymous caller cannot start a run that sends outbound messages",
-  { tags: ["feat:fl-integration-actions", "feat:fl-run-execution", "feat:fl-engine-nodes", "feat:fl-flow-validation", "feat:fl-builder", "feat:fl-i18n-rtl", "lvl:api"] },
+  "@issue-165 AC1: an anonymous caller cannot start a run or inspect guardrails",
+  { tags: ["feat:fl-integration-actions", "feat:fl-run-execution", "feat:fl-engine-nodes", "feat:fl-flow-validation", "feat:fl-builder", "feat:fl-i18n-rtl", "feat:fl-audit-log", "lvl:api"] },
   async ({ app }) => {
     // Use a UUID that is guaranteed not to exist (not a real flow ID) — all-zero variant makes it obviously fake
     const fakeFlowId = "00000000-0000-0000-0000-000000000000";
@@ -183,6 +183,9 @@ test(
     const text = await res.text();
     expect(text).not.toContain("SEND_RATE_LIMITED");
     expect(text).not.toContain("runId");
+
+    const auditRes = await fetch(new URL(`/api/workspaces/${fakeFlowId}/audit/guardrails`, app.baseUrl));
+    expect([401, 403, 404]).toContain(auditRes.status);
   },
 );
 
