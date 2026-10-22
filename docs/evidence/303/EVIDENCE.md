@@ -24,15 +24,12 @@ Supersedes part of #214. Parent issue: #108.
 | AC3 | `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts` (`docs/security/FEDERATED_MFA.md records the 2026-10-08 local pass`) | Exit code 0 (passed) |
 | AC4 | `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts` (`never marks tests/integration/email-token-lock-order.test.ts as unexecuted or not executed`) | Exit code 0 (passed) |
 | AC5 | `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts` (`never contains unexecuted or not executed phrasing in the #108 Reconciliation paragraph`, `has exactly one H3 security readiness review paragraph without duplication or unexecuted statements`) | Exit code 0 (passed) |
-| AC6 | Regression check on base (`origin/main`) vs head (`ai/303`): `tests/unit/email-token-lock-order-docs.test.ts` fails on base (exit code 1, 2 failed tests) and passes on head (exit code 0, 4 passed tests). | RED on base, GREEN on head |
-| AC7 | `pnpm typecheck` && `pnpm exec eslint tests/unit/email-token-lock-order-docs.test.ts` && `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/lock-order-doc.test.ts` | Exit code 0 (all clean, 18 tests passed) |
+| AC6 | Regression check on base (`origin/main`) vs head (`ai/303`): `tests/unit/email-token-lock-order-docs.test.ts` fails on base (exit code 1, 4 failed tests) and passes on head (exit code 0, 4 passed tests). | RED on base, GREEN on head |
+| AC7 | `pnpm typecheck` && `pnpm exec eslint .` && `pnpm exec vitest run tests/unit/email-token-lock-order-docs.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/lock-order-doc.test.ts` | Exit code 0 (all clean, 18 tests passed) |
 | AC8 | Non-user-facing change verification (no UI/browser flow modified; Playwright / RTL / LTR exempt). | Complete |
 
 ## Changed Covering Tests
-- `tests/unit/email-token-lock-order-docs.test.ts`: Added unit regression test verifying doc consistency, absence of unexecuted phrasing in Reconciliation, and single non-duplicate H3 paragraph.
-- `tests/integration/federated-lock-order.test.ts`: Reused `routeTransactions` export from `tests/integration/pg-lock-helpers.ts`.
-- `tests/integration/account-delete-sso-lock-order.test.ts`: Documented #108 acceptance criteria and history in header comments.
-- `tests/integration/pg-lock-helpers.ts`: Documented #108 authoring and #37 reuse in header comments.
+- `tests/unit/email-token-lock-order-docs.test.ts`: Added unit regression test verifying doc consistency across documents, absence of unexecuted phrasing in Reconciliation, and single non-duplicate H3 paragraph.
 
 ## Originating Sentry Issue & PR Linkage
 - **Originating Sentry issue:** None (QA / documentation consistency finding split from PR #214 / parent issue #108; not a runtime exception or crash).
