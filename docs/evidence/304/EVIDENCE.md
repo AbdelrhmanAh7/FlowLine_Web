@@ -3,7 +3,7 @@
 Fresh restart of #197 (Account security page 2/4: enable MFA with secret, backup codes and code check, replaces #259).
 Originating Sentry issue: None (feature work from Goal demo #150, FL G1 step 4, not an error report).
 
-Tested code: branch `ai/304` (head commit: `4dd243e01ee438953ca5fa11c71922acbb0f07b7`).
+Tested code: branch `ai/304-p2` (head commit: `de7c4e02`).
 Runs: 2026-10-22, local macOS, Node 26.10.0, pnpm 10.32.1.
 
 ## Acceptance Criteria
@@ -23,7 +23,7 @@ Runs: 2026-10-22, local macOS, Node 26.10.0, pnpm 10.32.1.
 | AC2 | `e2e/account-security.spec.ts` (lines 106–114, lines 205–214); `e2e-army/304-account-security.e2e.ts` ("@issue-304 AC2: a correct password shows the manual secret and backup codes with the one-time warning"); `src/app/account/security/two-factor-card.tsx` | Exit 0: `[data-testid=totp-secret]` and `[data-testid=backup-codes]` have explicit `dir="ltr"` attribute in both LTR and RTL Arabic layouts; warning `[data-testid=backup-codes-warning]` is visible; secret is non-empty valid base32 string and backup codes count >= 8. |
 | AC3 | `e2e/account-security.spec.ts` (lines 122–132); `e2e-army/304-account-security.e2e.ts` ("@issue-304 AC3: a wrong 6-digit code shows an error and the status stays Off after reload") | Exit 0: Submitting `000000` displays error toast "That code isn't valid. Try the current one." (`auth.twoFactorInvalid`); status badge stays "Off" / "غير مفعّل" (`data-state="off"`) after reload. |
 | AC4 | `e2e/account-security.spec.ts` (lines 134–146, lines 216–229); `e2e-army/304-account-security.e2e.ts` ("@issue-304 AC4: a valid 6-digit TOTP code turns the status On and persists across reload") | Exit 0: Submitting valid `totpCodeFor(secret)` turns status badge to "On" / "مفعّل (نشط)" (`data-state="on"`), removes secret and backup code elements from DOM, and status persists across page reload. |
-| AC5 | `e2e/account-security.spec.ts` (lines 89–95, lines 116–120, lines 149–181); `e2e-army/304-account-security.e2e.ts` ("@issue-304 AC5: Cancel leaves the status Off and the secret hidden"); `src/app/account/security/two-factor-card.tsx` | Exit 0: Cancel button (`type="button"`) closes form without submitting request; `takeSecret` consumes and clears password input; in-flight request cancellation guard increments `requestRef.current` preventing late responses from reopening the secret; no secret or codes in storage or URL. |
+| AC5 | `e2e/account-security.spec.ts` (lines 89–95, lines 116–120, lines 149–181); `e2e-army/304-account-security.e2e.ts` ("@issue-304 AC5: Cancel leaves the status Off and the secret hidden"); `src/app/account/security/two-factor-card.tsx` | Exit 0: Cancel button (`type="button"`) closes form without submitting request; `takeSecret` consumes and clears password input; in-flight request cancellation guard increments `requestRef.current` AND aborts `AbortController` preventing late responses from reopening the secret; no secret or codes in storage or URL. |
 | AC6 | `tests/unit/i18n.test.ts` (16 tests for key parity); `tests/unit/account-security-page.test.ts` (24 tests for catalogue keys & logical CSS); `git diff origin/main..HEAD -- src/app/admin/setup/setup-flow.tsx` | Exit 0: 16/16 i18n tests passed; 24/24 account-security tests passed; `git diff` on `setup-flow.tsx` is completely empty (file untouched). |
 
 ## Changed Covering Tests
@@ -50,14 +50,18 @@ Runs: 2026-10-22, local macOS, Node 26.10.0, pnpm 10.32.1.
 | `pnpm vitest run tests/unit/e2e-army-tooling.test.ts` | 0 | 12 passed (12) |
 | `git diff origin/main..HEAD -- src/app/admin/setup/setup-flow.tsx` | 0 | Clean: 0 lines changed (untouched) |
 
+| `pnpm vitest run --project unit --maxWorkers=2` | 0 | 1838 passed, 1 skipped |
+| `pnpm vitest run --project contract --maxWorkers=2` | 0 | 541 passed |
+
 ## Regression / Mutation Verification
 
 1. **Direction enforcement (`dir="ltr"` in RTL context)**:
    - Verified that `two-factor-card.tsx` enforces `dir="ltr"` on `<code data-testid="totp-secret">`, `<ul data-testid="backup-codes">`, and `<Input id="two-factor-code">`.
    - Explicit inline comments explain that TOTP secret keys, backup codes, and OTP codes are ASCII alphanumeric / numeric credentials that must be displayed and read left-to-right to prevent character transposition in RTL layouts.
 2. **Cancellation button behavior & race guard**:
-   - `type="button"` on Cancel buttons prevents form submit events from triggering empty enable/verify API requests.
-   - `requestRef.current += 1` in `cancel()` ensures an in-flight API response cannot reopen the secret or mutate state.
+    - `type="button"` on Cancel buttons prevents form submit events from triggering empty enable/verify API requests.
+    - `requestRef.current += 1` in `cancel()` ensures an in-flight API response cannot reopen the secret or mutate state.
+    - `AbortController.abort()` in `cancel()` actively cancels the in-flight fetch request, causing it to throw `AbortError` and preventing any late resolution from updating state.
 3. **Better-auth error mapping**:
    - `api()` in `src/lib/api.ts` parses better-auth's top-level `{ code, message }` body shape. Tested in `tests/unit/api-error-shape.test.ts` (failed on base, passed on head).
    - Only `err.code === "INVALID_PASSWORD"` is mapped to the password line; other 400 errors display their own server message via `apiErrorMessage(t, err)`.
