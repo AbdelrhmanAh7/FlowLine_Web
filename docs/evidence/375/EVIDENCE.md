@@ -10,7 +10,7 @@
 - **Parent Issues**: #295, #164
 - **Supersedes**: part of PR #362
 - **Branch**: `ai/375` (clean branch off `origin/main`)
-- **Tested Commit SHA**: ced79bda530fe30089ffb5749c95d82054ff140c
+- **Tested Commit SHA**: f34819ecac4c409fd90e03154e318cf54ae93d9e
 - **User-Facing UI Changed**: No (middleware URI/slug interception, backend validation, URL parsing, E2E request-level test assertions, unit test guards). Playwright screenshots and RTL/LTR Arabic visual captures are exempt for backend/middleware/test-only changes; Arabic strings and RTL layout are verified in `e2e/arabic.spec.ts`.
 
 ## Review Threads & Finding Resolutions
