@@ -359,4 +359,15 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Account security page: enable MFA with secret, backup codes and code check (issue #304, replaces #259, closes #197) — 2026-10-22
+
+Added `/account/security` page with two-step verification enrolment (`TwoFactorCard`):
+- Password confirmation checks `INVALID_PASSWORD` error from better-auth via top-level error parsing in `src/lib/api.ts`.
+- Enrolment shows manual base32 secret and backup codes with explicit `dir="ltr"` in both LTR and RTL layouts.
+- Backup codes warning, copy codes action, and secret visibility toggle.
+- 6-digit TOTP verification with status refresh to On (`data-state="on"`), persisted across reloads.
+- In-flight request cancellation guard prevents late responses from reopening the secret.
+- Full Arabic RTL support (`messages/ar.json` and `messages/en.json` key parity).
+- Covered by unit tests (`account-security-page.test.ts`, `api-error-shape.test.ts`, `gate-groups.test.ts`), Playwright E2E (`e2e/account-security.spec.ts`), and e2e-army natural-language tests (`e2e-army/304-account-security.e2e.ts`).
+
 
