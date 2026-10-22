@@ -546,13 +546,15 @@ describe("issue #335 gate preservation (AC2)", () => {
     ]);
   });
 
-  it("ensures no unit test files use .skip() or .only() to bypass gates", () => {
-    const unitTestDir = join(root, "tests/unit");
-    const unitFiles = readdirSync(unitTestDir).filter((f) => f.endsWith(".ts"));
-    for (const file of unitFiles) {
-      const content = readFileSync(join(unitTestDir, file), "utf8");
-      expect(content, `${file} must not contain .skip()`).not.toMatch(/\b(it|test|describe)\.skip\(/);
-      expect(content, `${file} must not contain .only()`).not.toMatch(/\b(it|test|describe)\.only\(/);
+  it("ensures no test files use .skip() or .only() to bypass gates", () => {
+    for (const subDir of ["unit", "contract", "integration"]) {
+      const dir = join(root, "tests", subDir);
+      const files = readdirSync(dir).filter((f) => f.endsWith(".ts"));
+      for (const file of files) {
+        const content = readFileSync(join(dir, file), "utf8");
+        expect(content, `${subDir}/${file} must not contain .skip()`).not.toMatch(/\b(it|test|describe)\.skip\(/);
+        expect(content, `${subDir}/${file} must not contain .only()`).not.toMatch(/\b(it|test|describe)\.only\(/);
+      }
     }
   });
 });
