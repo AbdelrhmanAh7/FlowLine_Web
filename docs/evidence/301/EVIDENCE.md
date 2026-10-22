@@ -1,6 +1,6 @@
 # Verification Evidence — Issue #301: Fresh restart of #145: Mizano connection type: base URL + scoped API key with 'Test connection' (replaces #215)
 
-**Tested commit SHA:** `4d69ef1e` (chore: ai implementer progress on #301)  
+**Tested commit SHA:** `b91188ff` (Merge branch 'origin/main' into ai/301-p2)  
 **Date:** 2026-10-22  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145, restarted as #301; part of FlowLine G5 #144)  
@@ -11,9 +11,9 @@
 
 | AC | Description | Verification |
 |----|-------------|--------------|
-| **AC1** | Mizano connection type supports base URL and scoped API key, stored encrypted at rest via crypto v2 envelope (`openSecret`), never echoed back in plain text or connection listings | `tests/contract/mizano-connection.test.ts`, `tests/unit/test-connection.test.ts`, `tests/integration/mizano-connection-test.test.ts:98-106`, and `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` |
-| **AC2** | Test connection endpoint `POST /api/workspaces/[wid]/connections/[cid]/test` verifies saved credentials with an 8 s deadline: calls Mizano `GET /api/health` then `GET /api/me`, returns `{ ok: true, provider: "Mizano", accountLabel }` without leaking secret, bounds and sanitizes failures (`AUTHENTICATION_FAILED`, `PROVIDER_UNREACHABLE`, `EGRESS_BLOCKED`, `PROVIDER_ERROR`, `TEST_NOT_SUPPORTED`, `NOT_CONNECTION_OWNER`), and refuses caller-supplied URL/key | `tests/contract/mizano-connection.test.ts` (24 tests), `tests/unit/test-connection.test.ts` (8 tests), `tests/contract/mizano-fake.test.ts` (8 tests), `tests/unit/connection-test-i18n.test.ts` (10 tests) |
-| **AC3** | Integrations UI (`/w/[slug]/integrations`): saved connection card displays "Test connection" button for non-OAuth providers (Mizano), triggers test mutation, and displays localized success ("Connection OK — {account}" / "الاتصال سليم — {account}") or error toast with full Arabic RTL layout support | `src/app/w/[slug]/integrations/page.tsx`, `tests/unit/connection-test-i18n.test.ts` (10 tests), `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` |
+| **AC1** | Mizano connection type supports base URL and scoped API key, stored encrypted at rest via crypto v2 envelope (`openSecret`), never echoed back in plain text or connection listings | `tests/contract/mizano-connection.test.ts`, `tests/unit/test-connection.test.ts`, and `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` |
+| **AC2** | Test connection endpoint `POST /api/workspaces/[wid]/connections/[cid]/test` verifies saved credentials with an 8 s deadline: calls Mizano `GET /api/health` then `GET /api/me`, returns `{ ok: true, provider: "Mizano", accountLabel }` without leaking secret, bounds and sanitizes failures (`AUTHENTICATION_FAILED`, `PROVIDER_UNREACHABLE`, `EGRESS_BLOCKED`, `PROVIDER_ERROR`, `TEST_NOT_SUPPORTED`, `NOT_CONNECTION_OWNER`), and refuses caller-supplied URL/key | `tests/contract/mizano-connection.test.ts` (23 tests), `tests/unit/test-connection.test.ts` (8 tests), `tests/contract/mizano-fake.test.ts` (8 tests), `tests/unit/connection-test-i18n.test.ts` (11 tests) |
+| **AC3** | Integrations UI (`/w/[slug]/integrations`): saved connection card displays "Test connection" button for non-OAuth providers (Mizano), triggers test mutation, and displays localized success ("Connection OK — {account}" / "الاتصال سليم — {account}") or error toast with full Arabic RTL layout support | `src/app/w/[slug]/integrations/page.tsx`, `tests/unit/connection-test-i18n.test.ts` (11 tests), `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` |
 | **AC4** | E2E-army suite includes API test and UI tests (LTR and RTL) tagged `@issue-301` and covering touched features (`feat:fl-connections`, `feat:fl-integrations`, `feat:fl-i18n-rtl`) | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` (3 tests) |
 
 ---
@@ -59,43 +59,42 @@
 
 | AC | Verification Method / Command | Exit Code | Observed Result |
 |---|---|---|---|
-| **AC1** | `pnpm vitest run tests/contract/mizano-connection.test.ts` (test: `returns the account label for a good key` & never echoes token); `tests/integration/mizano-connection-test.test.ts:98-106` (`secretEnc` verified at rest; connection list omits `token`); `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:79-111` | 0 | **PASS** — API key is encrypted at rest using workspace secret envelope; API responses never return `token`; test endpoint takes no body and never echoes secret. |
-| **AC2** | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/test-connection.test.ts` (tests: 400 `AUTHENTICATION_FAILED`, 502 `PROVIDER_UNREACHABLE` with 8s deadline, 400 `EGRESS_BLOCKED`, 502 `PROVIDER_ERROR`; translation tests for EN and AR); `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:113-146` (UI card flows in EN and AR RTL) | 0 | **PASS** — Every error maps to a bounded code with user-friendly translated text in EN and AR (RTL); raw provider body discarded. |
-| **AC3** | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/e2e-army-tooling.test.ts` | 0 | **PASS** — 104 passed (104) across 5 test files against the mocked HTTP fake provider server (`e2e/fakes/provider-server.ts`). |
-| **AC4** | `pnpm vitest related --run --passWithNoTests tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/test-connection.test.ts` & `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` | 0 | **PASS** — Tagged `@issue-301` e2e-army scenarios for API and UI (EN and AR RTL) covering `feat:fl-connections`, `feat:fl-integrations`, and `feat:fl-i18n-rtl`. |
+| **AC1** | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/unit/test-connection.test.ts` (tests: `returns the account label for a good key` & never echoes token; `succeeds for workspace owner/editor and returns account label without echoing secret`); `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:69-101` | 0 | **PASS** — API key is encrypted at rest using workspace secret envelope; API responses never return `token`; test endpoint takes no body and never echoes secret. |
+| **AC2** | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/test-connection.test.ts` (tests: 400 `AUTHENTICATION_FAILED`, 502 `PROVIDER_UNREACHABLE` with 8s deadline, 400 `EGRESS_BLOCKED`, 502 `PROVIDER_ERROR`; translation tests for EN and AR); `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:103-136` (UI card flows in EN and AR RTL) | 0 | **PASS** — Every error maps to a bounded code with user-friendly translated text in EN and AR (RTL); raw provider body discarded. |
+| **AC3** | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/contract/mizano.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/test-connection.test.ts tests/unit/e2e-army-tooling.test.ts` | 0 | **PASS** — 112 passed (112) across 6 test files against the mocked HTTP fake provider server (`e2e/fakes/provider-server.ts`). |
+| **AC4** | `pnpm vitest run tests/contract/mizano-connection.test.ts tests/contract/mizano-fake.test.ts tests/unit/connection-test-i18n.test.ts tests/unit/test-connection.test.ts` & `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` | 0 | **PASS** — Tagged `@issue-301` e2e-army scenarios for API and UI (EN and AR RTL) covering `feat:fl-connections`, `feat:fl-integrations`, and `feat:fl-i18n-rtl`. |
 
 ---
 
 ## Changed Covering Tests
 
-1. `tests/contract/mizano-connection.test.ts` (24 tests):
-   - `calls GET /api/health first, then GET /api/me, both with the scoped key as a Bearer` (AC2, AC3)
-   - `reports a rejected key as an auth failure, never a raw provider message` (AC2)
+1. `tests/contract/mizano-connection.test.ts` (23 tests):
+   - `calls GET /api/health first, then GET /api/me, both with the scoped key as a Bearer, and returns the label` (AC2, AC3)
+   - `reports a rejected key as an auth failure (400 AUTHENTICATION_FAILED)` (AC2)
    - `refuses a base URL that is not a bare https origin before a request is sent` (AC2)
    - `a failing health check stops before /api/me` (AC2)
-   - `does not trust a 200 health response of degraded/proxy/null, and never asks for /api/me` (AC2)
+   - `does not trust a 200 health response of degraded/proxy/null, and never asks for /api/me` (4 subtests) (AC2)
    - `gives the connection test its 8 s default deadline` (AC2)
    - `returns the account label for a good key` (AC1, AC2)
-   - `a wrong key is a 400 AUTHENTICATION_FAILED with fixed text` (AC2)
    - `an instance that does not answer within the deadline is a 502 PROVIDER_UNREACHABLE` (AC2)
    - `a connection dropped by the instance is a 502 PROVIDER_UNREACHABLE` (AC2)
    - `an unhealthy or failing instance is a 502 PROVIDER_ERROR; the provider text is not echoed` (AC2)
    - `a private-network base URL is refused as 400 EGRESS_BLOCKED and never sent` (AC2)
-   - Full `testError` kind-to-code mapping coverage (AC2)
+   - `testError mapping` (8 tests: auth, egress_blocked, timeout, network, response_lost, server, rate_limit, client) (AC2)
+   - `an unknown error is a 502 PROVIDER_ERROR and an HttpError passes through` (AC2)
 2. `tests/contract/mizano-fake.test.ts` (8 tests):
    - Tests fake server `/api/health` and `/api/me` endpoints under `FLOWLINE_ENV=test`.
 3. `tests/contract/mizano.test.ts` (50 tests):
    - Contract tests for Mizano provider definition, actions, schema validation, and URL checking.
 4. `tests/unit/test-connection.test.ts` (8 tests):
-   - Unit tests covering `runConnectionTest` validation, timeout bounds, and error mapping.
-5. `tests/unit/connection-test-i18n.test.ts` (10 tests):
+   - Unit tests covering `testConnection` authorization, UUID validation, connection existence, ownership check, OAuth refusal, and error forwarding.
+5. `tests/unit/connection-test-i18n.test.ts` (11 tests):
    - Validates that every code from the test route (`AUTHENTICATION_FAILED`, `PROVIDER_UNREACHABLE`, `PROVIDER_ERROR`, `EGRESS_BLOCKED`, `NOT_CONNECTION_OWNER`, `CONNECTION_NOT_FOUND`, `UNKNOWN_PROVIDER`, `TEST_NOT_SUPPORTED`) resolves to non-empty, localized text in both English and Arabic.
    - Asserts Arabic contains Arabic characters (`/[؀-ۿ]/`) and never leaks the server's English message.
+   - Tests button text and success toast translation for EN and AR.
 6. `tests/unit/e2e-army-tooling.test.ts` (12 tests):
    - Validates repo stays strictly within the 8 top-level `e2e-army/*.e2e.ts` file cap.
-7. `tests/integration/mizano-connection-test.test.ts` (8 tests):
-   - Tests access rules (owner/editor OK, viewer 403, non-member 404, private 403), unknown ID 404, OAuth refusal 400, revoked key 400, timeout 502, and encryption at rest.
-8. `e2e-army/147-mizano-create-customer-and-quote.e2e.ts`:
+7. `e2e-army/147-mizano-create-customer-and-quote.e2e.ts`:
    - `@issue-301 AC1/AC2: a saved Mizano connection keeps its scoped key server-side, and Test connection checks only the saved URL` (tags: `feat:fl-connections`, `lvl:api`)
    - `@issue-301 AC2: the saved Mizano connection's card offers a Test connection control that reports the account` (tags: `feat:fl-integrations`, `feat:fl-sign-in`, `lvl:ui`)
    - `@issue-301 AC2 Arabic: the Test connection control and its OK result are translated and the page is right-to-left` (tags: `feat:fl-i18n-rtl`, `feat:fl-integrations`, `lvl:ui`)
