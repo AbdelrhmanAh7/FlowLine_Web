@@ -1,6 +1,6 @@
 # Verification Evidence — Issue #301: Fresh restart of #145: Mizano connection type: base URL + scoped API key with 'Test connection' (replaces #215)
 
-**Tested commit SHA:** `b91188ff` (Merge branch 'origin/main' into ai/301-p2)  
+**Tested commit SHA:** `d508d006` (docs(#301): sync test counts and tested merge SHA in evidence and progress ledger)  
 **Date:** 2026-10-22  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145, restarted as #301; part of FlowLine G5 #144)  
