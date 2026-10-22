@@ -72,9 +72,13 @@ export const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx)
     }
     return result;
   } catch (err) {
+    const rawMsg = err instanceof Error ? err.message : "";
+    const message = rawMsg
+      ? `${rawMsg}: expected a valid positive decimal number or string with up to 2 decimal places`
+      : "must be a valid positive decimal string with up to 2 decimal places";
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: err instanceof Error ? err.message : "must be a valid positive decimal string with up to 2 decimal places",
+      message,
     });
     return z.NEVER;
   }

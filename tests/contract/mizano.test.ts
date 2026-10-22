@@ -412,8 +412,8 @@ describe("mizano.create_draft_quote", () => {
     ).rejects.toThrow();
   });
 
-  // Contract tests: verify negative qty, unitPrice, and taxRate values (numbers and strings)
-  // are properly rejected under safeParse with ZodError without throwing raw errors.
+  // Contract tests (AC2): verify negative qty, unitPrice, and taxRate values (numbers and strings)
+  // are properly rejected under safeParse with ZodError without throwing raw errors, returning { success: false, error: ZodError }.
   it("rejects invalid input (invalid qty - negative number and string)", async () => {
     const { ctx } = ctxReturning(quoteResponse);
     for (const badQty of [-5, "-5"]) {
