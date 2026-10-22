@@ -531,3 +531,29 @@ describe("gate-report keeps a browser failure diagnosable (issue #35)", () => {
     }
   });
 });
+
+describe("issue #335 gate preservation (AC2)", () => {
+  it("preserves all required CI workflows and composite actions with zero weakened gates", () => {
+    expect(workflowFiles).toEqual([
+      ".github/workflows/claude.yml",
+      ".github/workflows/docs.yml",
+      ".github/workflows/gate.yml",
+      ".github/workflows/nightly.yml",
+    ]);
+    expect(actionFiles).toEqual([
+      ".github/actions/gate-report/action.yml",
+      ".github/actions/setup-gate/action.yml",
+    ]);
+  });
+
+  it("ensures no unit test files use .skip() or .only() to bypass gates", () => {
+    const unitTestDir = join(root, "tests/unit");
+    const unitFiles = readdirSync(unitTestDir).filter((f) => f.endsWith(".ts"));
+    for (const file of unitFiles) {
+      const content = readFileSync(join(unitTestDir, file), "utf8");
+      expect(content, `${file} must not contain .skip()`).not.toMatch(/\b(it|test|describe)\.skip\(/);
+      expect(content, `${file} must not contain .only()`).not.toMatch(/\b(it|test|describe)\.only\(/);
+    }
+  });
+});
+

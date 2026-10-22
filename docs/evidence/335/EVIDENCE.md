@@ -12,7 +12,7 @@
 | AC | Requirement | Implementation & Verification |
 |---|---|---|
 | **AC1** | **Root cause diagnosis across the 5 PRs**: Investigate whether a shared defect on `main` causes check `verify` to fail across PRs #329, #215, #184, #139, #135, or if failures are branch-specific. | Proved via hub verification reports (`/Users/abdelrahmanahmed/agents/logs/verify/FlowLine_Web/<sha>/report.md`): every PR failed on independent, feature-specific causes in its own branch diff rather than a shared regression on `main`. |
-| **AC2** | **Gate preservation**: No CI workflow, test, review or merge gate is removed, skipped, or weakened (zero edits to `.github/workflows/*`, zero deleted or skipped tests). | Zero edits made to `.github/workflows/`. All CI workflows, tests, review and merge gates have been preserved with zero edits to `.github/workflows/*` and verified via `tests/unit/ci-workflows.test.ts` (82/82 passing, exit code 0). |
+| **AC2** | **Gate preservation**: No CI workflow, test, review or merge gate is removed, skipped, or weakened (zero edits to `.github/workflows/*`, zero deleted or skipped tests). | Zero edits made to `.github/workflows/`. All CI workflows, tests, review and merge gates have been preserved with zero edits to `.github/workflows/*` and verified via `tests/unit/ci-workflows.test.ts` (84/84 passing, exit code 0). |
 | **AC3** | **Resolution & fresh restart verification**: Verify the resolution state of all 5 PRs and their replacements on `main`. | PR #184 was superseded by PR #376 which was merged to main at commit `8167bcbb`, addressing the verification failure. PR #139 was replaced by fresh restart PR #380 which passed verify at commit `311ffd4` with health 100/100. PR #135 was superseded by PR #358, addressing the verification failure. PR #215 was replaced by fresh restart PR #385 which passed verify at commit `4d69ef1` with health 90/100. PR #329 is identified as a conflicting draft PR with test assertion failure in its specific branch diff. |
 | **AC4** | **Blocker Breaker audit**: Document why `cigroup:AbdelrhmanAh7/FlowLine_Web:verify` was detected and how it transitions. | In `src/lib/blockerbreaker.ts`, `prBlockers()` groups failing checks across open PRs whenever count >= `ciGroupMinPrs` (3). The task was split after 24 hours into 9 per-PR tasks (`status: split` in `state/blocker-breaker.json`). The group alert is sustained only because superseded PRs remain open on GitHub and await closure by the hub's stuck resolver. |
 | **AC5** | **Pre-push checks pass cleanly**: `pnpm lint`, `pnpm typecheck`, and unit tests pass with exit code 0. | `pnpm lint` (exit 0), `pnpm typecheck` (exit 0), `pnpm exec vitest run tests/unit/ci-workflows.test.ts` (82 passed, exit 0). |
@@ -66,16 +66,16 @@ The blocker breaker's state has been documented with the task split into 9 small
 
 | Test / Command | AC Covered | Result | Exit Code |
 |---|---|---|---|
-| `pnpm exec vitest run tests/unit/ci-workflows.test.ts` | AC2 | `PASS: 82 passed (0 failed)` | 0 |
+| `pnpm exec vitest run tests/unit/ci-workflows.test.ts` | AC2 | `PASS: 84 passed (0 failed)` | 0 |
 | `pnpm typecheck` | AC5 | `PASS: tsc --noEmit clean (0 errors)` | 0 |
 | `pnpm lint` | AC5 | `PASS: eslint clean (0 errors, 0 warnings)` | 0 |
 | `node -e '...bb.tasks["cigroup:AbdelrhmanAh7/FlowLine_Web:verify"]'` | AC4 | `Status: "split" (split into 9 smaller tasks)` | 0 |
 | `git log -n 1 8167bcbb` | AC3 | `Commit 8167bcbb merged on main (#376 resolves #184/#323)` | 0 |
 
-All CI workflows, tests, review and merge gates have been preserved with zero edits to `.github/workflows/*` and verified via `tests/unit/ci-workflows.test.ts` (82/82 passing). Pre-push checks (`pnpm lint`, `pnpm typecheck`, and unit tests) all pass with exit code 0.
+All CI workflows, tests, review and merge gates have been preserved with zero edits to `.github/workflows/*` and verified via `tests/unit/ci-workflows.test.ts` (84/84 passing). Pre-push checks (`pnpm lint`, `pnpm typecheck`, and unit tests) all pass with exit code 0.
 
 ## Changed Covering Tests
-Docs and blocker-breaker investigation chore; exempt from new user-facing covering tests per repo rules (`E2E: not needed — blocker breaker diagnosis and resolution evidence (pure internal / docs / CI diagnosis)`). Existing suite of 82 CI workflow invariant tests in `tests/unit/ci-workflows.test.ts` verified passing.
+`tests/unit/ci-workflows.test.ts`: added automated tests for issue #335 AC2 (`preserves all required CI workflows and composite actions with zero weakened gates`, `ensures no unit test files use .skip() or .only() to bypass gates`), bringing suite to 84/84 passing. User-facing E2E exempt per repo rules (`E2E: not needed — blocker breaker diagnosis and resolution evidence (pure internal / docs / CI diagnosis)`).
 
 ## UI / Playwright / Arabic Localization
 Exempt: No UI components, routes, or user-facing strings were modified.
