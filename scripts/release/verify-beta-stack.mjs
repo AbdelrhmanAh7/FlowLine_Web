@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 /**
- * Verifies a running private-beta stack from the OUTSIDE (P4-11): TLS, HTTP→HTTPS redirect, health, security headers,
- * correlation ids, internal routes blocked at the proxy, database not reachable, invitation-only sign-up.
- *   node scripts/release/verify-beta-stack.mjs --base https://beta.example.com [--out artifacts/phase-4/beta-infra]
- * For a LOCAL dry run against Caddy's internal CA, set BETA_STACK_ALLOW_INSECURE=1 (skips certificate validation;
- * only allowed for loopback hosts — the real check must validate the Let's Encrypt certificate).
+ * Verifies a running private-beta stack from the OUTSIDE (P4-11): TLS, health, headers, invite sign-up.
+ * Surface area: exports pure helpers (isLoopbackTarget, resolveTlsPolicy, buildVerifyArgs) for testing without CLI execution.
+ * Local CA dry run: BETA_STACK_ALLOW_INSECURE=1 (loopback-only; real beta domain validates Let's Encrypt cert).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import net from "node:net";
@@ -32,10 +30,13 @@ export function buildVerifyArgs(env = process.env, targetUrl = "https://localhos
   const args = ["--base", base];
   const o = out || env?.VERIFY_OUT || env?.OUT;
   if (o) args.push("--out", String(o).trim());
-  if ((env?.BETA_STACK_ALLOW_INSECURE === "1" || env?.BETA_STACK_ALLOW_INSECURE === 1) && isLoopbackTarget(base)) args.push("--insecure-local");
+  if ((env?.BETA_STACK_ALLOW_INSECURE === "1" || env?.BETA_STACK_ALLOW_INSECURE === 1) && isLoopbackTarget(base)) {
+    args.push("--insecure-local");
+  }
   return args;
 }
 
+// Entrypoint isolation: CLI execution only runs when directly invoked as main process.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
@@ -118,6 +119,7 @@ try {
   const bad = await fetch(`${BASE}/api/beta/check`, { method: "POST", headers: { "content-type": "application/json", origin: BASE }, body: JSON.stringify({ email, code: "FL-NOT-A-REAL-CODE" }) });
   const badBody = await bad.json().catch(() => ({}));
   check("an invalid beta code is refused", bad.status === 200 && badBody.allowed === false, `HTTP ${bad.status} allowed=${badBody.allowed}`);
+  // That the sign-up hook creates no user row is proven server-side by tests/integration/p4-beta-access.test.ts.
 } catch (e) {
   check("verification completed", false, String(e.cause?.code ?? e.message).slice(0, 200));
 }

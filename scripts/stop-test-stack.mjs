@@ -2,6 +2,7 @@
 // .env.test like dev-test.mjs), plus test workers/sandboxes. Matching by port (not command line) also catches the Next
 // server child process in BOTH modes (`next dev` and FLOWLINE_TEST_NEXT=start `next start`). Uses lsof when present,
 // fuser otherwise (minimal Linux images ship one or the other).
+// Surface area: exports pure validators & discrete argv builders strictly for unit testing without side effects.
 // One stack of several (sharded E2E): the same FLOWLINE_TEST_PORT / _FAKE_PORT / _AI_PORT env as dev-test.mjs, or
 // `--port=<app> [--fake-port=<p>] [--ai-port=<p>]`. Only that stack's ports and explicitly owned launcher/worker processes are stopped.
 import { execFileSync } from "node:child_process";
@@ -9,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import testStackEnv from "./test-stack.cjs";
 
-// Pure validators and argv builders exported for unit testing; script execution is guarded by import.meta.url.
+// Pure validators and discrete argv builders exported strictly for unit testing; CLI execution guarded by import.meta.url.
 export function validatePid(pid) {
   const s = String(pid ?? "").trim(), n = Number(s);
   if (!/^[0-9]{1,7}$/.test(s) || n <= 1) throw new Error(`Invalid PID: ${JSON.stringify(pid)}`);
@@ -31,8 +32,9 @@ export function buildFuserArgs(port, { kill = false } = {}) { return kill ? ["-k
 export function buildKillArgs(pids) {
   const list = Array.isArray(pids) ? pids : [pids];
   if (list.length === 0) throw new Error("At least one PID required");
-  return ["-9", ...list.map(validatePid).map(String)];
+  return ["-9", ...list.map((p) => String(validatePid(p)))];
 }
+// Discrete argv builders: avoid shell-string execution (alert #13) and regex sanitization (alert #4).
 export function buildPowerShellArgs(ports, singlePort = null) {
   const ps = (Array.isArray(ports) ? ports : [ports]).map(validatePort)
     .map((p) => `Get-NetTCPConnection -LocalPort ${p} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { taskkill /PID $_.OwningProcess /T /F | Out-Null }`);
@@ -77,7 +79,7 @@ const run = (file, args) => {
 const stackPids = () => {
   const mine = `FLOWLINE_TEST_PORT=${PORT}`;
   const pids = [];
-  if (!existsSync("/proc")) return pids;
+  if (!existsSync("/proc")) return pids; // macOS: by port only
   for (const pid of readdirSync("/proc").filter((d) => /^\d+$/.test(d) && Number(d) !== process.pid)) {
     try {
       const cmd = readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0").join(" ");
@@ -96,7 +98,7 @@ const stackPids = () => {
 if (process.platform === "win32") {
   run("powershell", buildPowerShellArgs(single ? [PORT] : PORTS, single ? PORT : null));
 } else {
-  const owned = stackPids();
+  const owned = stackPids(); // before the ports go, while dev-test.mjs is still up
   for (const p of PORTS) {
     const pids = run("lsof", buildLsofArgs(p)).split(/\s+/).map((s) => s.trim()).filter(Boolean).map(validatePid);
     if (pids.length) run("kill", buildKillArgs(pids));

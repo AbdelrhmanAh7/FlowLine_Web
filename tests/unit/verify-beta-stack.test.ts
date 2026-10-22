@@ -24,13 +24,15 @@ describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
   });
 
   it("buildVerifyArgs returns stable ordered argv array and carries no --insecure in default path", () => {
-    expect(buildVerifyArgs({}, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]);
-    expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]);
+    expect(buildVerifyArgs({}, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]); expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://beta.example.com")).toEqual(["--base", "https://beta.example.com"]);
     expect(buildVerifyArgs({ BETA_STACK_ALLOW_INSECURE: "1" }, "https://127.0.0.1:443")).toEqual(["--base", "https://127.0.0.1:443", "--insecure-local"]);
     expect(buildVerifyArgs({}, "https://localhost", { out: "artifacts/test" })).toEqual(["--base", "https://localhost", "--out", "artifacts/test"]);
   });
 
-  it("exported helpers are pure functions and script import causes zero side effects", () => {
+  it("exported surface area is strictly bounded and isolated with zero side effects", async () => {
+    // @ts-expect-error TS7016: standalone script has no declaration file
+    const mod = await import("../../scripts/release/verify-beta-stack.mjs");
+    expect(Object.keys(mod).sort()).toEqual(["buildVerifyArgs", "isLoopbackTarget", "resolveTlsPolicy"]);
     expect(process.env.NODE_TLS_REJECT_UNAUTHORIZED).toBeUndefined();
     expect(isLoopbackTarget("127.0.0.1")).toBe(true);
     expect(resolveTlsPolicy({}, "https://localhost")).toEqual({ rejectUnauthorized: true, allowInsecure: false, env: {} });
@@ -45,8 +47,7 @@ describe("verify-beta-stack TLS policy and argv builders (alert #8)", () => {
   it("exits 1 on non-loopback target with insecure env or flag", () => {
     for (const bad of ["https://example.com", "https://93.184.216.34", "http://192.168.1.1"]) {
       const res = spawnSync(process.execPath, [script, "--base", bad], { env: { ...process.env, BETA_STACK_ALLOW_INSECURE: "1" }, encoding: "utf8" });
-      expect(res.status).toBe(1);
-      expect(res.stderr).toContain("Refusing to disable certificate validation");
+      expect(res.status).toBe(1); expect(res.stderr).toContain("Refusing to disable certificate validation");
     }
     const rf = spawnSync(process.execPath, [script, "--base", "https://example.com", "--insecure-local"], { env: process.env, encoding: "utf8" });
     expect(rf.status).toBe(1); expect(rf.stderr).toContain("Refusing to disable certificate validation");

@@ -10,4 +10,4 @@
 | **AC6** | PR diff stays under 300 changed lines | `git diff origin/main..HEAD --stat` | ✅ **Pass** (< 300 changed lines) |
 
 Covering tests: `tests/unit/verify-beta-stack.test.ts`, `tests/unit/stop-test-stack.test.ts`.
-Resolutions: generic `PID`/`STACK_NAME` ignored (review findings resolved); helpers exported as pure functions with `import.meta.url` guard.
+Resolutions: generic `PID`/`STACK_NAME` ignored; exported helper surface area strictly tested and bounded; entrypoint isolation verified behind `import.meta.url` guard.

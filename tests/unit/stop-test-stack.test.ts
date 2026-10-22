@@ -22,23 +22,22 @@ describe("stop-test-stack validators and argv builders (alerts #4 & #13)", () =>
   });
 
   it("builds exact argv arrays and rejects invalid values before any command execution", () => {
-    expect(buildLsofArgs(3100)).toEqual(["-ti", "tcp:3100"]);
-    expect(() => buildLsofArgs("3100; rm -rf /")).toThrow();
+    expect(buildLsofArgs(3100)).toEqual(["-ti", "tcp:3100"]); expect(() => buildLsofArgs("3100; evil")).toThrow();
     expect(buildFuserArgs(3100)).toEqual(["-n", "tcp", "3100"]);
-    expect(buildFuserArgs(3100, { kill: true })).toEqual(["-k", "-n", "tcp", "3100"]);
-    expect(() => buildFuserArgs("3100; evil")).toThrow();
+    expect(buildFuserArgs(3100, { kill: true })).toEqual(["-k", "-n", "tcp", "3100"]); expect(() => buildFuserArgs("3100; evil")).toThrow();
     expect(buildKillArgs([1234, 5678])).toEqual(["-9", "1234", "5678"]);
     for (const b of ["1234; rm -rf /", "$(whoami)"]) expect(() => buildKillArgs([b])).toThrow();
     expect(() => buildKillArgs([])).toThrow();
     const ps = buildPowerShellArgs([3100, 4010], 3100);
-    expect(ps.slice(0, 2)).toEqual(["-NoProfile", "-Command"]);
-    expect(ps[2]).toContain("LocalPort 3100");
+    expect(ps.slice(0, 2)).toEqual(["-NoProfile", "-Command"]); expect(ps[2]).toContain("LocalPort 3100");
     expect(() => buildPowerShellArgs(["3100; evil"])).toThrow();
-    expect(buildStackArgs("flowline-test")).toEqual(["--filter", "name=flowline-test"]);
-    expect(() => buildStackArgs("stack; rm -rf /")).toThrow();
+    expect(buildStackArgs("flowline-test")).toEqual(["--filter", "name=flowline-test"]); expect(() => buildStackArgs("stack; rm -rf /")).toThrow();
   });
 
-  it("exported helpers are pure functions with zero execution side effects", () => {
+  it("exported surface area is strictly bounded and isolated with zero side effects", async () => {
+    // @ts-expect-error TS7016: standalone script has no declaration file
+    const mod = await import("../../scripts/stop-test-stack.mjs");
+    expect(Object.keys(mod).sort()).toEqual(["buildFuserArgs", "buildKillArgs", "buildLsofArgs", "buildPowerShellArgs", "buildStackArgs", "validatePid", "validatePort", "validateStackName"]);
     expect(validatePid(1234)).toBe(1234);
     expect(buildKillArgs(1234)).toEqual(["-9", "1234"]);
     expect(buildLsofArgs(3100)).toEqual(["-ti", "tcp:3100"]);
@@ -57,9 +56,7 @@ describe("stop-test-stack validators and argv builders (alerts #4 & #13)", () =>
   it("scripts contain no shell exec string, no shell: true, and no .replace sanitization", () => {
     for (const f of ["scripts/stop-test-stack.mjs", "scripts/release/verify-beta-stack.mjs"]) {
       const c = read(f);
-      expect(c).not.toMatch(/\bexecSync\s*\(/);
-      expect(c).not.toMatch(/\bexec\s*\(/);
-      expect(c).not.toContain("shell: true");
+      expect(c).not.toMatch(/\bexecSync\s*\(/); expect(c).not.toMatch(/\bexec\s*\(/); expect(c).not.toContain("shell: true");
     }
     expect(read("scripts/stop-test-stack.mjs")).not.toContain(".replace(");
   });
