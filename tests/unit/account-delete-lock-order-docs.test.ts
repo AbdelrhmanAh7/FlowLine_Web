@@ -9,7 +9,7 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
   const betaReport = read("docs/implementation/PHASE4_BETA_REPORT.md");
   const federatedMfa = read("docs/security/FEDERATED_MFA.md");
   const testFile = read("tests/integration/account-delete-sso-lock-order.test.ts");
-  const evidenceFile = read("artifacts/phase-4/issue-315/EVIDENCE.md");
+  const evidenceFile = read("docs/evidence/315/EVIDENCE.md");
 
   it("PHASE4_BETA_REPORT.md contains the #108 section with a preceding blank line (MD022)", () => {
     // Heading exists
@@ -88,7 +88,7 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     );
   });
 
-  it("artifacts/phase-4/issue-315/EVIDENCE.md tracks AC5 linking the CTO decision", () => {
+  it("docs/evidence/315/EVIDENCE.md tracks AC5 linking the CTO decision", () => {
     expect(evidenceFile).toContain("AC5");
     expect(evidenceFile).toContain("https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574");
     expect(evidenceFile).toContain("b9ae3ee");

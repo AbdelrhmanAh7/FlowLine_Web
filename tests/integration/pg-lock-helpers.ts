@@ -7,6 +7,9 @@ import { db } from "@/db";
  * Two-connection lock-order helpers (same technique as retained-file-locking.test.ts): run a production function on its
  * own PostgreSQL connection, pause it only AFTER a real lock-taking statement has completed, then observe the competitor
  * waiting through `pg_blocking_pids`. No production test hook and no sleep is treated as proof of blocking.
+ *
+ * Authored for #108 (and used in #109 / federated lock-order tests): exports `routeTransactions`, `connect`,
+ * `pauseAfter`, and `blockedByObserver` to test two concurrent production functions across separate PostgreSQL connections.
  */
 
 /** A dedicated connection with bounded waits, so a stuck lock fails the test instead of hanging it. */
