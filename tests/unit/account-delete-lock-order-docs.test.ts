@@ -10,6 +10,7 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
   const federatedMfa = read("docs/security/FEDERATED_MFA.md");
   const testFile = read("tests/integration/account-delete-sso-lock-order.test.ts");
   const evidenceFile = read("docs/evidence/315/EVIDENCE.md");
+  const artifactEvidenceFile = read("artifacts/phase-4/issue-315/EVIDENCE.md");
 
   it("PHASE4_BETA_REPORT.md contains the #108 section with a preceding blank line (MD022)", () => {
     // Heading exists
@@ -88,10 +89,12 @@ describe("@issue-315 docs and comment consistency: account deletion lock-order a
     );
   });
 
-  it("docs/evidence/315/EVIDENCE.md tracks AC5 linking the CTO decision and records real commit SHA", () => {
-    expect(evidenceFile).toContain("AC5");
-    expect(evidenceFile).toContain("https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/214#issuecomment-6121061574");
-    expect(evidenceFile).toContain("b9ae3ee");
-    expect(evidenceFile).toMatch(/Tested commit: `[0-9a-f]{8,40}`/);
+  it("docs/evidence/315/EVIDENCE.md and artifacts/phase-4/issue-315/EVIDENCE.md track AC5 noting no external record exists for the CTO decision and record real commit SHA", () => {
+    for (const f of [evidenceFile, artifactEvidenceFile]) {
+      expect(f).toContain("AC5");
+      expect(f).toMatch(/no external record exists/i);
+      expect(f).toContain("b9ae3ee");
+      expect(f).toMatch(/Tested commit: `[0-9a-f]{8,40}`/);
+    }
   });
 });
