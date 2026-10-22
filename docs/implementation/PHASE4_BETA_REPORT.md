@@ -96,7 +96,7 @@ snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
 
 Details and open debt: [OUTBOUND_GUARDRAILS.md](../security/OUTBOUND_GUARDRAILS.md).
 
-**Tests:** `tests/unit/engine.test.ts` (`INVALID_SEND_LIMIT`); `tests/integration/p2-actions.test.ts` (cap refuses the second send with `SEND_RATE_LIMITED` and logs one `outbound_capped`; an out-of-range `maxSendsPerMinute` is refused at enqueue with 422 `INVALID_SEND_LIMIT`; cross-workspace connection fails first with no `outbound_capped`); `e2e-army/165-outbound-send-cap.e2e.ts` is only a request-level guard (anonymous run start is refused) and does **not** exercise the cap, because the hub's throwaway stack has no seeded connection to send through.
+**Tests:** `tests/unit/engine.test.ts` (`INVALID_SEND_LIMIT`); `tests/integration/p2-actions.test.ts` (cap refuses the second send with `SEND_RATE_LIMITED` and logs one `outbound_capped`; an out-of-range `maxSendsPerMinute` is refused at enqueue with 422 `INVALID_SEND_LIMIT`; cross-workspace connection fails first with no `outbound_capped`); `e2e-army/200-route-error-headers.e2e.ts` (scenario `@issue-165 AC1`) is a request-level guard (anonymous run start is refused) and does **not** exercise the cap, because the hub's throwaway stack has no seeded connection to send through.
 
 ## route() error headers (issue #200) — 2026-10-13
 

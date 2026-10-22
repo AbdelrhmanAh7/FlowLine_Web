@@ -170,7 +170,7 @@ test(
 
 test(
   "@issue-165 AC1: an anonymous caller cannot start a run that sends outbound messages",
-  { tags: ["feat:fl-integration-actions", "feat:fl-run-execution", "feat:fl-engine-nodes", "feat:fl-flow-validation", "feat:fl-builder", "lvl:api"] },
+  { tags: ["feat:fl-integration-actions", "feat:fl-run-execution", "feat:fl-engine-nodes", "feat:fl-flow-validation", "feat:fl-builder", "feat:fl-i18n-rtl", "lvl:api"] },
   async ({ app }) => {
     // Use a UUID that is guaranteed not to exist (not a real flow ID) — all-zero variant makes it obviously fake
     const fakeFlowId = "00000000-0000-0000-0000-000000000000";
