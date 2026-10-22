@@ -366,4 +366,15 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Deal won → Mizano quote design template & gallery resolution (issue #420) — 2026-10-22
+
+Resolved blocker finding `7f88f1847229` split from PR #410 (parent #409) where `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:85` expects `data-testid="template-deal-won-mizano-quote"`.
+- Defined and registered `deal-won-mizano-quote` in `DESIGN_TEMPLATES` (`src/engine/design-templates.ts`) with 7-node flow graph, customer creation approval gate, and helper methods (`templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, `heldBackDesignTemplates`).
+- Added complete `designTemplates.deal-won-mizano-quote` entries in `src/i18n/messages/en.json` and `src/i18n/messages/ar.json`.
+- Added unit tests in `tests/unit/deal-won-mizano-template.test.ts` (4/4 pass) covering wiring, action registry verification, approval pause, rejection, and numerical formatting.
+- Demonstrated regression test failure on base in `tests/unit/i18n-content-text.test.ts` (missing Arabic step labels), passing on head (44/44 pass).
+- Added e2e-army tests to `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` (@issue-420 AC1, AC2, AC3).
+- Supersedes part of #410.
+
+
 
