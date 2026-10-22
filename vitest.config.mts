@@ -20,7 +20,7 @@ export default defineConfig({
       { resolve: { alias }, test: { name: "contract", include: ["tests/contract/**/*.test.ts"], environment: "node", testTimeout: 20000, fileParallelism: false } },
       // Live/sandbox suite: real local Ollama, real Postgres, SaaS sandboxes (BLOCKED without credentials).
       // Kept separate from the deterministic suites; results land in artifacts/phase-2/live-results.json.
-      { resolve: { alias }, test: { name: "live", include: ["tests/live/**/*.test.ts"], environment: "node", testTimeout: 200000, fileParallelism: false } },
+      { resolve: { alias }, test: { name: "live", include: hasTestDb ? ["tests/live/**/*.test.ts"] : [], environment: "node", testTimeout: 200000, fileParallelism: false } },
       {
         resolve: { alias },
         test: {
@@ -42,6 +42,7 @@ export default defineConfig({
         test: {
           name: "nightly",
           include: nightlyFiles,
+          exclude: hasTestDb ? [] : nightlyFiles,
           environment: "node",
           fileParallelism: false,
           testTimeout: 30000,

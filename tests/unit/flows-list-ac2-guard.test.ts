@@ -486,10 +486,12 @@ describe("@issue-375 guard against unverified flow list invariance (supersedes p
     }
   });
 
-  it("AC18: vitest.config.mts guards integration and nightly projects behind hasTestDb", () => {
+  it("AC18: vitest.config.mts guards integration, nightly, and live projects behind hasTestDb", () => {
     const vitestConfigContent = readFileSync(resolve(root, "vitest.config.mts"), "utf8");
     expect(vitestConfigContent).toContain("const hasTestDb = Boolean(process.env.DATABASE_URL && /\\/flowline_test(_[a-z0-9]+)?(\\?|$)/.test(process.env.DATABASE_URL));");
     expect(vitestConfigContent).toContain('include: hasTestDb ? ["tests/integration/**/*.test.ts"] : []');
+    expect(vitestConfigContent).toContain('exclude: hasTestDb ? [] : nightlyFiles');
+    expect(vitestConfigContent).toContain('include: hasTestDb ? ["tests/live/**/*.test.ts"] : []');
     expect(vitestConfigContent).toContain('globalSetup: hasTestDb ? ["tests/integration/global-setup.ts"] : []');
   });
 });
