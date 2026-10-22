@@ -95,6 +95,19 @@ describe("template step labels and names", () => {
     expect(templateNodeLabel(ar, "no-such-template", node)).toBe("Custom step");
     expect(templateName(ar, { id: "no-such-template", name: "Mine" })).toBe("Mine");
   });
+
+  it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242)", () => {
+    expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won → Mizano quote");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toMatch(ARABIC);
+    for (const key of ["description", "sample", "result"] as const) {
+      expect(en.has(`localTemplates.deal-won-mizano-quote.${key}`)).toBe(true);
+      expect(ar.has(`localTemplates.deal-won-mizano-quote.${key}`)).toBe(true);
+    }
+    const enNodeKeys = Object.keys(enNodes("localTemplates", "deal-won-mizano-quote"));
+    const arNodeKeys = Object.keys(arNodes("localTemplates", "deal-won-mizano-quote"));
+    expect(enNodeKeys.length).toBeGreaterThan(0);
+    expect(enNodeKeys).toEqual(arNodeKeys);
+  });
 });
 
 describe("integration catalog text", () => {
