@@ -1,10 +1,13 @@
 # Evidence — Issue #355: fix: qa finding: AC2 verified: moneyInput.safeParse correctly rejects negative qty, un… (split from #309)
 
+**Model:** Gemini 3.8 Flash · **Effort:** High · **Why:** Verify and rescue issue #355 / PR #360, proving moneyInput.safeParse correctly rejects negative values without throwing, with full test and evidence coverage.
+
 ## Overview & Scope
 - **Issue**: #355 (`fix: qa finding: AC2 verified: moneyInput.safeParse correctly rejects negative qty, un… (split from #309)`)
 - **Parent Issues**: #309 (reached fix-round cap), #296 (`fix: mizano.ts: major: Throwing a plain Error inside a zod .transform`)
 - **Supersedes**: part of PR #309
-- **Branch**: `ai/355` (clean branch off `origin/main` at `116935affd3c23aaebf586337df0f4084a13dac7`)
+- **Branch**: `ai/355` (clean branch merged with `origin/main` at `a5e267c2`)
+- **Tested Commit SHA**: `7e9898e629fa4ed4805b5330bacbf080ecabeb70`
 - **Originating Sentry Issue**: None (internal provider schema validation issue originating in PR #279 / issue #296 / PR #309)
 - **User-Facing UI**: No (internal provider schema validation and error-handling fix; exempt from E2E UI tests — `E2E: not needed — internal provider input schema validation and error-handling fix (unit and contract tests cover safeParse/parse and negative money input handling; no user-facing UI flow changed)`)
 
