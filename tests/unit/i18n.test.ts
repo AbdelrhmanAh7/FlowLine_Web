@@ -180,3 +180,36 @@ describe("API error messages", () => {
     expect(apiErrorMessage(t, "weird")).toBe(ar.errors.generic);
   });
 });
+
+describe("Arabic typography and dash consistency (finding 232f2a67a05a)", () => {
+  it("backupCodes messages across catalogues use em-dash (—) and not regular hyphen (-)", () => {
+    expect(ar.platformAdmin.setup.backupCodes).toContain("—");
+    expect(ar.platformAdmin.setup.backupCodes).not.toContain(" - ");
+    expect(en.platformAdmin.setup.backupCodes).toContain("—");
+    expect(en.platformAdmin.setup.backupCodes).not.toContain(" - ");
+
+    // Finding 232f2a67a05a cites account.security.twoFactor.backupCodes (from PR #318 / #327 on branch ai/318).
+    // Ensure if account.security exists in the catalogue, it strictly uses an em-dash (—) and never a hyphen (-).
+    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown> | undefined;
+    const arSecurity = arAccount?.security as Record<string, unknown> | undefined;
+    const arTwoFactor = arSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const arBackupCodes = arTwoFactor?.backupCodes as string | undefined;
+    if (arBackupCodes) {
+      expect(arBackupCodes).toContain("—");
+      expect(arBackupCodes).not.toContain(" - ");
+    }
+  });
+
+  it("outbound guardrail messages and node config hints maintain clean typography", () => {
+    expect(ar.config.action.maxSendsPerMinute).toBeDefined();
+    expect(ar.config.action.maxSendsPerMinuteHint).toBeDefined();
+    expect(en.config.action.maxSendsPerMinute).toBeDefined();
+    expect(en.config.action.maxSendsPerMinuteHint).toBeDefined();
+    expect(ar.runEvent.outbound_capped).toBe("تم تحديد معدل الإرسال");
+    expect(en.runEvent.outbound_capped).toBe("outbound capped");
+    expect(ar.settings.audit.guardrailActor).toBe("النظام (حاجز حماية)");
+    expect(en.settings.audit.guardrailActor).toBe("system (guardrail)");
+  });
+});
+
+

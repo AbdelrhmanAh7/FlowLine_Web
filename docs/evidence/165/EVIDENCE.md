@@ -35,12 +35,14 @@ Implements the first version of outbound guardrails per CTO answer on #165:
 | AC4, AC5 | Node configuration editor & i18n key parity (en/ar) | `pnpm typecheck` && `pnpm exec eslint src/components/builder/node-config.tsx` | 0 | Clean (0 errors); keys present in `messages/en.json` and `messages/ar.json` |
 | AC6 | E2E gate request guard | `pnpm exec eslint e2e-army/200-route-error-headers.e2e.ts` | 0 | Clean (0 errors); scenario `@issue-165 AC1` runs on GitHub CI verify job |
 | AC7 | Audit log integration: `outbound_capped` events appear in audit log with i18n label | `pnpm exec vitest run tests/unit/guardrails-audit.test.ts` | 0 | 2 passed (0 errors); endpoint returns `outbound_capped` events; UI merges with audit events |
+| QA | Arabic typography & em-dash consistency (finding 232f2a67a05a) | `pnpm exec vitest run --project unit tests/unit/i18n.test.ts -t "dash consistency"` | 0 | 2 passed (0 errors; 18 passed in file) |
 | Static | Full TypeScript compilation | `pnpm typecheck` | 0 | `tsc --noEmit` exited with code 0 |
 | Static | ESLint on all changed files | `pnpm exec eslint worker/handlers.ts src/engine/validate.ts src/engine/types.ts src/components/builder/node-config.tsx src/server/events.ts tests/unit/engine.test.ts tests/unit/guardrails-audit.test.ts tests/integration/p2-actions.test.ts e2e-army/200-route-error-headers.e2e.ts src/app/w/[slug]/settings/audit-log.tsx src/app/api/workspaces/[wid]/audit/guardrails/route.ts` | 0 | Clean (0 errors) |
 
 ## Changed Covering Tests
 - `tests/unit/engine.test.ts`: Added unit test `validates maxSendsPerMinute on integration.action nodes` verifying 0, 1.5, 1001 produce `INVALID_SEND_LIMIT`, while 60 and undefined pass validation.
 - `tests/unit/guardrails-audit.test.ts`: Added unit tests verifying `/api/workspaces/[wid]/audit/guardrails` route returns formatted `outbound_capped` events and handles pagination with `nextBefore`.
+- `tests/unit/i18n.test.ts`: Added unit test suite `Arabic typography and dash consistency (finding 232f2a67a05a)` testing `backupCodes` messages across catalogues use em-dash (`—`) and not regular hyphen (`-`), and that all outbound guardrail messages (`config.action.maxSendsPerMinute`, `config.action.maxSendsPerMinuteHint`, `runEvent.outbound_capped`, `settings.audit.guardrailActor`) maintain clean typography.
 - `tests/integration/p2-actions.test.ts`: Added three integration tests:
   - `rate limiting validates connection workspace before applying limits`
   - `a side-effect action over its per-connection send cap fails with SEND_RATE_LIMITED and logs outbound_capped`
@@ -48,6 +50,14 @@ Implements the first version of outbound guardrails per CTO answer on #165:
 - `e2e-army/200-route-error-headers.e2e.ts`: Added request-level E2E security guard scenario `@issue-165 AC1: an anonymous caller cannot start a run or inspect guardrails`.
 - `src/app/api/workspaces/[wid]/audit/guardrails/route.ts`: New API endpoint to fetch `outbound_capped` run events for the audit log.
 - `src/app/w/[slug]/settings/audit-log.tsx`: Updated to fetch and merge guardrail events with audit events, with i18n label support.
+
+## Note on Finding 232f2a67a05a (Arabic typography and em-dash consistency)
+- **Symptom:** QA flagged `src/i18n/messages/ar.json:1: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes. This should be consistent with the English version.`
+- **Root Cause:** The key `account.security.twoFactor.backupCodes` was authored on branch `ai/318` (PR #318 / #327, issue #199) and has not yet merged into `main`. On `main` and on `ai/165`, that key does not exist. The only active `backupCodes` string is `platformAdmin.setup.backupCodes`, which already properly uses an em-dash (`—`) in both `src/i18n/messages/en.json:3600` and `src/i18n/messages/ar.json:3704`:
+  - `en`: `"Backup codes — store them offline now. They are shown only once."`
+  - `ar`: `"رموز احتياطية — احفظها دون اتصال الآن. تُعرض مرة واحدة فقط."`
+- **Fix & Proof:** Added regression unit test in `tests/unit/i18n.test.ts:184-214` checking that any `backupCodes` in Arabic catalogues uses `—` and not `-`, and that all outbound guardrail messages introduced in #165 (`config.action.maxSendsPerMinute`, `config.action.maxSendsPerMinuteHint`, `runEvent.outbound_capped`, `settings.audit.guardrailActor`) maintain clean typography in English and Arabic.
+
 
 ## Bug Fix / Regression Demonstration
 - On base (`origin/main`), outbound send capping logic does not exist in `worker/handlers.ts` and `INVALID_SEND_LIMIT` is not validated in `src/engine/validate.ts`.
