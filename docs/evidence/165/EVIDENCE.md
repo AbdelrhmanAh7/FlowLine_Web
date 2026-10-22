@@ -1,7 +1,7 @@
 # Issue #165 — Outbound guardrails (first version): verification report
 
 Branch `ai/165` (merged with `origin/main`).
-Tested commit SHA: `dbe9e59d` (and head).
+Tested commit SHA: `55dd97d2` (HEAD).
 Originating Sentry issue: None (feature/trend from Ideas Lab / CTO answers on #165, not a Sentry incident).
 
 ## Summary
