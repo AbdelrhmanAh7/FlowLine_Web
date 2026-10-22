@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   collectPilotMetrics,
   formatMetricsAsMarkdown,
+  getDuplicateWebhookRuns,
+  getScheduledRuns,
   isMainModule,
   NOT_LOGGED_DENIALS,
   NOT_TRACKED_ARABIC,
@@ -52,51 +54,46 @@ describe("pilot-metrics: parseRange", () => {
 });
 
 describe("pilot-metrics: formatMetricsAsMarkdown", () => {
-  it("prints every row on an empty range without crashing", () => {
+  it("AC2 & AC3: prints every row on an empty range without crashing (all 13 metrics)", () => {
     const md = formatMetricsAsMarkdown(empty, FROM, TO);
     expect(rows(md)).toHaveLength(13);
     expect(md).toContain("| Sign-ups | 0 |");
     expect(md).toContain("| Median time to verified | N/A |");
     expect(md).toContain("| Run success rate | N/A |");
+    expect(md).toContain("| Webhook runs | 0 |");
     expect(md).toContain("| Scheduled runs | 0 |");
+    expect(md).toContain("| Approvals (workflow) | 0 |");
     expect(md).toContain("| Duplicate webhook runs | 0 |");
-    expect(md).toContain(NOT_TRACKED_UPTIME);
+    expect(md).toContain("| Cross-workspace access denials | " + NOT_LOGGED_DENIALS + " |");
+    expect(md).toContain("| Share of users who switched to Arabic | " + NOT_TRACKED_ARABIC + " |");
+    expect(md).toContain("| Staging uptime | " + NOT_TRACKED_UPTIME + " |");
     expect(md).not.toMatch(/\|[ \t]*\|/); // no empty cell
   });
 
-  it("AC1 & AC4: shows a 0% success rate as 0.0%, not N/A (every finished run failed)", () => {
-    expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0 }, FROM, TO)).toContain("| Run success rate | 0.0% |");
+  it("AC2: formats scheduled runs count in markdown", () => {
+    const md = formatMetricsAsMarkdown({ ...empty, scheduledRuns: 7 }, FROM, TO);
+    expect(md).toContain("| Scheduled runs | 7 |");
   });
 
-  it("AC2: formats null runSuccessRate as N/A (no finished runs in range)", () => {
+  it("AC1: formats duplicate webhook runs count in markdown", () => {
+    const md = formatMetricsAsMarkdown({ ...empty, duplicateWebhookRuns: 3 }, FROM, TO);
+    expect(md).toContain("| Duplicate webhook runs | 3 |");
+  });
+
+  it("formats run success rate as 0.0%, 100.0%, or fractional percentage", () => {
+    expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0 }, FROM, TO)).toContain("| Run success rate | 0.0% |");
+    expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: 1.0 }, FROM, TO)).toContain("| Run success rate | 100.0% |");
+    expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0.85 }, FROM, TO)).toContain("| Run success rate | 85.0% |");
     expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: null }, FROM, TO)).toContain("| Run success rate | N/A |");
   });
-
-  it("AC3: formats 100% success rate as 100.0% (all finished runs succeeded)", () => {
-    expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: 1.0 }, FROM, TO)).toContain("| Run success rate | 100.0% |");
-  });
-
-  it("AC3: formats a fractional rate and says plainly what is not recorded", () => {
-    const md = formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0.8, scheduledRuns: 3 }, FROM, TO);
-    expect(md).toContain("| Run success rate | 80.0% |");
-    expect(md).toContain("| Scheduled runs | 3 |");
-    expect(md).toContain(NOT_LOGGED_DENIALS);
-    expect(md).toContain(NOT_TRACKED_ARABIC);
-    expect(md).toContain(NOT_TRACKED_UPTIME);
-  });
-
-  it("AC5: proves regression where truthiness check treats 0 as falsy returning N/A", () => {
-    const buggyFormat = (rate: number | null) => (rate ? `${(Number(rate) * 100).toFixed(1)}%` : "N/A");
-    const fixedFormat = (rate: number | null) => (rate != null ? `${(Number(rate) * 100).toFixed(1)}%` : "N/A");
-
-    // Buggy truthiness check treats 0 as falsy and prints N/A (the bug from PR #170)
-    expect(buggyFormat(0)).toBe("N/A");
-    // Fixed != null check correctly prints 0.0%
-    expect(fixedFormat(0)).toBe("0.0%");
+  it("AC3: formats staging uptime metric using NOT_TRACKED_UPTIME documenting external /api/health probe", () => {
+    const md = formatMetricsAsMarkdown(empty, FROM, TO);
+    expect(md).toContain("| Staging uptime | " + NOT_TRACKED_UPTIME + " |");
+    expect(NOT_TRACKED_UPTIME).toContain("/api/health");
   });
 });
 
-describe("pilot-metrics: collectPilotMetrics", () => {
+describe("pilot-metrics: collectPilotMetrics and queries", () => {
   it("AC4: propagates a 0 success rate from run metrics query to PilotMetrics", async () => {
     let callIndex = 0;
     const mockDb = {
@@ -119,6 +116,55 @@ describe("pilot-metrics: collectPilotMetrics", () => {
     const md = formatMetricsAsMarkdown(metrics, FROM, TO);
     expect(md).toContain("| Run success rate | 0.0% |");
   });
+
+  it("AC1 & AC2: propagates scheduled runs and duplicate runs from queryable to PilotMetrics", async () => {
+    let callIndex = 0;
+    const mockDb = {
+      execute: async () => {
+        callIndex++;
+        if (callIndex === 1) return { rows: [{ signups: 10, median_hours_to_verified: 1.5 }] };
+        if (callIndex === 2) return { rows: [{ count: 8 }] };
+        if (callIndex === 3) return { rows: [{ count: 6 }] };
+        if (callIndex === 4) return { rows: [{ success_rate: 0.95, p95_queue_to_start_ms: 120 }] };
+        if (callIndex === 5) return { rows: [{ count: 20 }] }; // webhook runs
+        if (callIndex === 6) return { rows: [{ count: 12 }] }; // scheduled runs (Query 5b)
+        if (callIndex === 7) return { rows: [{ count: 4 }] };  // approvals (Query 5c)
+        if (callIndex === 8) return { rows: [{ count: 2 }] };  // duplicate webhook runs (Query 5d)
+        return { rows: [] };
+      },
+    } as unknown as Queryable;
+
+    const metrics = await collectPilotMetrics(mockDb, FROM, TO);
+    expect(metrics.runSuccessRate).toBe(0.95);
+    expect(metrics.webhookRuns).toBe(20);
+    expect(metrics.scheduledRuns).toBe(12);
+    expect(metrics.approvals).toBe(4);
+    expect(metrics.duplicateWebhookRuns).toBe(2);
+
+    const md = formatMetricsAsMarkdown(metrics, FROM, TO);
+    expect(md).toContain("| Run success rate | 95.0% |");
+    expect(md).toContain("| Scheduled runs | 12 |");
+    expect(md).toContain("| Duplicate webhook runs | 2 |");
+    expect(md).toContain("| Staging uptime | " + NOT_TRACKED_UPTIME + " |");
+  });
+
+  it("AC1: getDuplicateWebhookRuns executes query against Queryable", async () => {
+    const mockDb = {
+      execute: async () => ({ rows: [{ count: 3 }] }),
+    } as unknown as Queryable;
+
+    const res = await getDuplicateWebhookRuns(mockDb, FROM, TO);
+    expect(res).toEqual({ count: 3 });
+  });
+
+  it("AC2: getScheduledRuns executes query against Queryable", async () => {
+    const mockDb = {
+      execute: async () => ({ rows: [{ count: 7 }] }),
+    } as unknown as Queryable;
+
+    const res = await getScheduledRuns(mockDb, FROM, TO);
+    expect(res).toEqual({ count: 7 });
+  });
 });
 
 describe("pilot-metrics: CLI", () => {
@@ -133,7 +179,10 @@ describe("pilot-metrics: CLI", () => {
 
   it("exits non-zero with a usage message on stderr for a reversed range, before touching the DB", () => {
     const tsx = path.resolve("node_modules/.bin/tsx");
-    const r = spawnSync(tsx, ["scripts/pilot-metrics.ts", "--from", "2026-10-23", "--to", "2026-10-16"], { encoding: "utf8", env: { ...process.env, DATABASE_URL: "" } });
+    const r = spawnSync(tsx, ["scripts/pilot-metrics.ts", "--from", "2026-10-23", "--to", "2026-10-16"], {
+      encoding: "utf8",
+      env: { ...process.env, DATABASE_URL: "" },
+    });
     expect(r.status).toBe(2);
     expect(r.stderr).toContain("Usage: pilot-metrics.ts --from YYYY-MM-DD --to YYYY-MM-DD");
     expect(r.stdout).toBe("");
