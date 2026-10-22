@@ -7,7 +7,7 @@
 - **Parent Issues**: #309 (reached fix-round cap), #296 (`fix: mizano.ts: major: Throwing a plain Error inside a zod .transform`)
 - **Supersedes**: part of PR #309
 - **Branch**: `ai/355` (clean branch merged with `origin/main` at `a86674a8`)
-- **Tested Commit SHA**: `79f961e7f392cc9854c854d2b7253e77167b274c`
+- **Tested Commit SHA**: `6993a8e1d1a856159cb538b044b527cece035673`
 - **Originating Sentry Issue**: None (internal provider schema validation issue originating in PR #279 / issue #296 / PR #309)
 - **User-Facing UI**: No (internal provider schema validation and error-handling fix; exempt from E2E UI tests — `E2E: not needed — internal provider input schema validation and error-handling fix (unit and contract tests cover safeParse/parse and negative money input handling; no user-facing UI flow changed)`)
 
@@ -26,7 +26,7 @@
 - **`src/integrations/providers/mizano.ts:59`**: Verified and enhanced `moneyInput` schema decimal validation, normalization, and error containment in `ZodError` via `ctx.addIssue` with `z.NEVER`. Added descriptive error message formatting distinguishing specific decimal format expectations on non-decimal input strings.
 - **`tests/unit/mizano-money-input.test.ts:1`**: Updated test suite documentation explicitly mapping each test block to AC1–AC4 (negative rejection, valid input normalization to 2-decimal strings including Arabic-Indic digits, and clean `ZodError` error handling).
 - **`tests/contract/mizano.test.ts:412`**: Updated contract test suite verifying negative `qty`, `unitPrice`, and `taxRate` values (both numbers and strings) are rejected under `safeParse` without throwing raw errors, returning `{ success: false, error: ZodError }`.
-- **`tests/unit/mizano-money-input.test.ts:172`**: Enhanced AC4 regression test documentation proving unhandled error escape prevention and validating clean `ZodError` containment under `safeParse` and `parse`.
+- **`tests/unit/mizano-money-input.test.ts:175`**: Enhanced AC4 regression test documentation proving unhandled error escape prevention and validating clean `ZodError` containment under `safeParse` and `parse`.
 
 ---
 
