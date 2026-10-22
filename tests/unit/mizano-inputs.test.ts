@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { getAction } from "@/integrations/registry";
-import { decimalString } from "@/integrations/providers/mizano";
+
+const quoteAction = getAction("mizano.create_draft_quote")?.action;
+if (!quoteAction) {
+  throw new Error("mizano.create_draft_quote action not found in registry");
+}
+const lineSchema = (quoteAction.input as unknown as { shape: { lines: { element: { shape: { qty: { safeParse: (v: unknown) => { success: boolean } } } } } } }).shape.lines.element;
+const decimalString = lineSchema.shape.qty;
 
 describe("mizano input validation (issue #292 / AC2)", () => {
   it("decimalString schema accepts non-negative decimal strings with up to 2 decimal places", () => {
