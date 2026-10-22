@@ -64,6 +64,12 @@ describe("docs consistency: email-token-lock-order test execution status", () =>
       betaReport.split("## H3 security readiness review")[1]?.split(/^## /m)[0] ?? "";
     const occurrences = (h3Section.match(/PR #21 \(H3, open;/g) || []).length;
     expect(occurrences).toBe(1);
-    expect(h3Section).not.toMatch(/email-token-lock-order(?:\.test\.ts)?[^.\n]*?(?:not executed|unexecuted)/i);
+    const h3ReviewParagraph = h3Section.split("\n\n").find((p) => p.startsWith("PR #21 (H3, open;")) ?? "";
+    expect(h3ReviewParagraph).not.toMatch(/email-token-lock-order(?:\.test\.ts)?[^.\n]*?(?:not executed|unexecuted)/i);
+    // Ensure no contradictory statement claiming other integration files were not run locally
+    expect(h3ReviewParagraph).not.toMatch(/the other integration files were not run locally/i);
+    expect(h3ReviewParagraph).toMatch(
+      /member-lock-order\.test\.ts` \*\*passed locally[^\n]*?\*\*, and CI is the gate/
+    );
   });
 });
