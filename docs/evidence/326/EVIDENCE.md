@@ -2,7 +2,7 @@
 
 Branch `ai/326`, PR #328. Supersedes part of PR #244 (parent issue #149, Template: 'Deal won → Mizano quote' with an approval step).
 Originating Sentry issue: None (CI gate failure on PR #244).
-Tested Commit SHA: `a56681dedc18c2d8e104ec7c2ee3521b4f2ecb59`
+Tested Commit SHA: `ec11eaa2a72018241cfb1e2c943801f9b3cf2cae`
 
 ## Summary
 Implements the 'Deal won → Mizano quote' template in `src/engine/design-templates.ts` with an approval gate on `mizano.create_customer`, localization in English and Arabic (`src/i18n/messages/{en,ar}.json`), and template availability validation in `src/server/flows.ts`. Fixes root causes of the `gate` failure on commit `7634b2c` of PR #244 without breaking button accessible names or multi-tenant workspace isolation.
