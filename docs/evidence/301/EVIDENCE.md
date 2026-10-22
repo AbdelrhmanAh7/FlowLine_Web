@@ -1,6 +1,6 @@
 # Verification Evidence — Issue #301: Fresh restart of #145: Mizano connection type: base URL + scoped API key with 'Test connection' (replaces #215, closes #145)
 
-**Tested commit SHA:** `b197d4ae` (Merge remote-tracking branch 'origin/main' into ai/301)  
+**Tested commit SHA:** `216ebec6` (Merge remote-tracking branch 'origin/main' into ai/301)  
 **Date:** 2026-10-22  
 **Test environment:** macOS, Node 26.10.0, Vitest 5.0.2, pnpm 10.32.1  
 **Originating Sentry issue:** None (feature request #145, restarted as #301; part of FlowLine G5 #144)  
