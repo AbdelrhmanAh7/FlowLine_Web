@@ -29,9 +29,15 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
   const codeRef = useRef<HTMLInputElement>(null);
   // Bumped whenever an in-flight enable/verify is cancelled or replaced, so a late response can't reopen the secret.
   const requestRef = useRef(0);
+  // AbortController for in-flight requests; aborted on cancel so late responses never resolve.
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const cancel = () => {
-    requestRef.current += 1;
+    requestRef.current = 0;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     takeSecret(passwordRef.current);
     setError(null);
     setAskPassword(false);
@@ -42,6 +48,8 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
 
   const enable = async () => {
     const req = ++requestRef.current;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     const password = takeSecret(passwordRef.current) ?? "";
     setPending("enable");
     setError(null);
@@ -49,6 +57,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       const r = await api<{ totpURI: string; backupCodes: string[] }>("/api/auth/two-factor/enable", {
         method: "POST",
         json: { password, issuer: "Flowline" },
+        signal: abortController.signal,
       });
       if (requestRef.current !== req) return;
       setEnrolment({
@@ -68,6 +77,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       toast(msg, "danger");
     } finally {
       if (requestRef.current === req) setPending(null);
+      if (abortControllerRef.current === abortController) abortControllerRef.current = null;
     }
   };
 
@@ -80,9 +90,11 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       return;
     }
     const req = ++requestRef.current;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     setPending("verify");
     try {
-      await api("/api/auth/two-factor/verify-totp", { method: "POST", json: { code } });
+      await api("/api/auth/two-factor/verify-totp", { method: "POST", json: { code }, signal: abortController.signal });
       if (requestRef.current !== req) return;
       setEnrolment(null);
       router.refresh();
@@ -96,6 +108,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
       );
     } finally {
       if (requestRef.current === req) setPending(null);
+      if (abortControllerRef.current === abortController) abortControllerRef.current = null;
     }
   };
 
