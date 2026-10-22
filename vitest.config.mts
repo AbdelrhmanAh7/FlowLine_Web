@@ -41,7 +41,7 @@ export default defineConfig({
         resolve: { alias },
         test: {
           name: "nightly",
-          include: hasTestDb ? nightlyFiles : [],
+          include: nightlyFiles,
           environment: "node",
           fileParallelism: false,
           testTimeout: 30000,
