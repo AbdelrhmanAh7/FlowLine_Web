@@ -158,6 +158,31 @@ describe("integration catalog text", () => {
     expect(providerCategory(ar, "Developer tools")).toBe("أدوات المطوّرين");
   });
 
+  it("the Mizano provider description and action descriptions are properly localized in Arabic (#365)", () => {
+    const mizano = listProviders().find((p) => p.id === "mizano")!;
+    expect(providerDescription(ar, mizano)).toBe("موصل المحاسبة Mizano");
+
+    const createCustomer = mizano.actions.find((a) => a.id === "mizano.create_customer")!;
+    const createCustomerDesc = actionDescription(ar, createCustomer);
+    expect(createCustomerDesc).toContain("الاسم");
+    expect(createCustomerDesc).toBe(
+      "ينشئ عميلاً جديدًا في Mizano بالاسم والشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري."
+    );
+
+    const listOverdue = mizano.actions.find((a) => a.id === "mizano.list_overdue_invoices")!;
+    const listOverdueDesc = actionDescription(ar, listOverdue);
+    expect(listOverdueDesc.endsWith(".")).toBe(true);
+    expect(listOverdueDesc).toBe(
+      "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل."
+    );
+
+    const createQuote = mizano.actions.find((a) => a.id === "mizano.create_draft_quote")!;
+    const createQuoteDesc = actionDescription(ar, createQuote);
+    expect(createQuoteDesc).toBe(
+      "ينشئ عرض أسعار مسودّة في Mizano مع عميل وبنود (العملة، العناصر مع الكمية وسعر الوحدة ونسبة الضريبة)."
+    );
+  });
+
   it("unknown providers, actions and categories fall back to the catalog's own text", () => {
     expect(providerCategory(ar, "Robotics")).toBe("Robotics");
     expect(providerDescription(ar, { id: "acme", description: "Acme things" })).toBe("Acme things");

@@ -6,6 +6,7 @@
 // Issue #148: the catalog also offers Mizano's "List overdue invoices" action.
 // Issue #364: verify localization in both languages for the Mizano integration catalog.
 // Issue #301 (Mizano connection type and Test connection): saved connection keeps secret encrypted, Test connection verifies credentials.
+// Issue #365: verify Arabic localization for Mizano integration and clean locale teardown.
 import { createHash } from "node:crypto";
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
@@ -207,4 +208,28 @@ test(
     await agent.assert("the Mizano integration description mentions Mizano accounting connector");
   },
 );
+
+test(
+  "@issue-365 AC1: Mizano integration in Arabic shows localized provider and action details with RTL layout and clean locale teardown",
+  { tags: ["feat:fl-integrations", "feat:fl-integration-actions", "feat:fl-i18n-rtl"], session: "fl-user" },
+  async ({ app, agent, screen, browser }) => {
+    try {
+      // Set locale to Arabic
+      await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
+      await app.open("/");
+      // Verify RTL layout
+      await expect(browser.evaluate(() => document.documentElement.dir)).resolves.toBe("rtl");
+      await agent.act("open the workspace's Integrations page from the navigation");
+      await agent.act("open the Mizano integration");
+      // Verify Arabic description and action listing
+      await agent.assert("the Mizano integration description mentions موصل المحاسبة Mizano");
+      await agent.assert("the Mizano integration lists an action named إنشاء عميل");
+      await expect(screen.getByText("إنشاء عميل").first()).toBeVisible();
+    } finally {
+      // Restore locale to English to prevent test pollution
+      await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
+    }
+  },
+);
+
 
