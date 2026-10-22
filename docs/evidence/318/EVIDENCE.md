@@ -37,6 +37,7 @@ Branch: `ai/318`
 2. `tests/unit/docs-index.test.ts`:
    - Asserts `docs/security/ACCOUNT_SECURITY.md` is indexed in `docs/README.md` with status `draft` and `owner-review: yes`.
    - Asserts presence of required terms and file references in `docs/security/ACCOUNT_SECURITY.md`, and absence of unverified engine decoupling claims.
+   - Verifies valid Playwright command strings for account security in `docs/implementation/PHASE4_BETA_REPORT.md`.
 
 3. `e2e-army/199-disable-two-factor.e2e.ts`:
    - Adds scenario `@issue-318 AC4: Arabic account security page renders RTL context with LTR credentials` tagged `feat:fl-i18n-rtl`.

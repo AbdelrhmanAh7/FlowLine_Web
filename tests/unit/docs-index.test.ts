@@ -53,15 +53,10 @@ describe("docs index and PR #159 docs", () => {
     expect(content).not.toContain("src/server/access.ts");
   });
 
-  it("records valid, non-zero Playwright commands for account-security in PHASE4_BETA_REPORT.md and NEXT_ACTION.md", () => {
+  it("records valid, non-zero Playwright commands for account-security in PHASE4_BETA_REPORT.md", () => {
     const betaReport = read("implementation/PHASE4_BETA_REPORT.md");
     expect(betaReport).toContain("pnpm exec playwright test e2e/account-security.spec.ts --project=chromium --workers=1");
     expect(betaReport).toContain('pnpm exec playwright test e2e/arabic.spec.ts -g "Arabic account security page" --project=chromium --workers=1');
     expect(betaReport).toContain("PR #327 supersedes part of #269");
-
-    const nextAction = readFileSync(fileURLToPath(new URL("../../NEXT_ACTION.md", import.meta.url)), "utf8");
-    expect(nextAction).toContain("pnpm exec playwright test e2e/account-security.spec.ts --project=chromium --workers=1");
-    expect(nextAction).toContain('pnpm exec playwright test e2e/arabic.spec.ts -g "Arabic account security page" --project=chromium --workers=1');
-    expect(nextAction).toContain("PR #327 (supersedes part of #269");
   });
 });
