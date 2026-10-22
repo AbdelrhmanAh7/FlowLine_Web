@@ -86,102 +86,37 @@ describe("pilot-metrics: formatMetricsAsMarkdown", () => {
     expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: 0.85 }, FROM, TO)).toContain("| Run success rate | 85.0% |");
     expect(formatMetricsAsMarkdown({ ...empty, runSuccessRate: null }, FROM, TO)).toContain("| Run success rate | N/A |");
   });
-});
-
-describe("pilot-metrics: regressions (demonstrating base failure vs head pass)", () => {
-  it("AC1 (P1): proves regression where base counted rejected webhook_event rows instead of actual duplicate runs", () => {
-    // Simulated database state:
-    // 2 runs were created with the same (flow_id, trigger_ref) (e.g. drift in dedupe enforcement).
-    // The webhook route returned 200/409 duplicate without writing a rejected webhook_event row.
-    const runsTable = [
-      { id: "run-1", flowId: "flow-a", triggerKind: "webhook", triggerRef: "evt-123", createdAt: new Date("2026-10-18T10:00:00Z") },
-      { id: "run-2", flowId: "flow-a", triggerKind: "webhook", triggerRef: "evt-123", createdAt: new Date("2026-10-18T10:00:01Z") },
-      { id: "run-3", flowId: "flow-a", triggerKind: "webhook", triggerRef: "evt-456", createdAt: new Date("2026-10-18T11:00:00Z") },
-    ];
-    // In production, same-event retries and signature replays do not write rejected event rows:
-    const webhookEventsTable: Array<{ id: number; runId: string | null; status: string }> = [
-      { id: 1, runId: "run-1", status: "accepted" },
-      { id: 2, runId: "run-3", status: "accepted" },
-      // Plus one rejected event that was rejected because the flow was unpublished (NOT a duplicate run!)
-      { id: 3, runId: null, status: "rejected" },
-    ];
-
-    // Base query logic from PR #170 (commit 22233f18):
-    // SELECT COUNT(*)::int AS count FROM webhook_event we JOIN run r ON r.id = we.run_id WHERE we.status = 'rejected'
-    const baseQueryDuplicates = (events: typeof webhookEventsTable) => {
-      return events.filter((e) => e.status === "rejected" && e.runId !== null).length;
-    };
-
-    // Head query logic (issue #320):
-    // SELECT COALESCE(SUM(n - 1), 0)::int AS count FROM (
-    //   SELECT COUNT(*) AS n FROM run WHERE trigger_kind = 'webhook' AND trigger_ref IS NOT NULL
-    //   GROUP BY flow_id, trigger_ref HAVING COUNT(*) > 1
-    // ) dup
-    const headQueryDuplicates = (runs: typeof runsTable) => {
-      const groups = new Map<string, number>();
-      for (const r of runs) {
-        if (r.triggerKind === "webhook" && r.triggerRef) {
-          const key = `${r.flowId}:${r.triggerRef}`;
-          groups.set(key, (groups.get(key) ?? 0) + 1);
-        }
-      }
-      let sum = 0;
-      for (const count of groups.values()) {
-        if (count > 1) sum += count - 1;
-      }
-      return sum;
-    };
-
-    // On base: duplicate run-1 and run-2 exist with triggerRef "evt-123", but baseQuery reports 0!
-    // It completely misses actual duplicate runs.
-    expect(baseQueryDuplicates(webhookEventsTable)).toBe(0);
-
-    // On head: headQuery accurately detects the duplicate run (1 duplicate run beyond the original).
-    expect(headQueryDuplicates(runsTable)).toBe(1);
-
-    // Furthermore, if an event was rejected with a runId attached (e.g. flow failed validation),
-    // base counted it as a "duplicate webhook run" false positive:
-    const falsePositiveEvents = [{ id: 4, runId: "run-1", status: "rejected" }];
-    expect(baseQueryDuplicates(falsePositiveEvents)).toBe(1); // Base incorrectly flags non-duplicate as duplicate!
-    expect(headQueryDuplicates([runsTable[0]!])).toBe(0); // Head correctly sees 1 run = 0 duplicates
-  });
-
-  it("AC2 (P2): proves regression where scheduled runs were missing from report in base", () => {
-    // Base formatMetricsAsMarkdown from PR #170 (commit 22233f18) omitted scheduled runs:
-    const baseMarkdown = [
-      "# Pilot Metrics",
-      "| Metric | Value |",
-      "| Webhook runs | 5 |",
-      "| Approvals (workflow) | 2 |",
-    ].join("\n");
-
-    // On base: Scheduled runs is not included in the report
-    expect(baseMarkdown.includes("Scheduled runs")).toBe(false);
-
-    // On head: Scheduled runs is included in the report
-    const headMarkdown = formatMetricsAsMarkdown({ ...empty, scheduledRuns: 5 }, FROM, TO);
-    expect(headMarkdown).toContain("| Scheduled runs | 5 |");
-  });
-
-  it("AC3 (P2): proves regression where staging uptime criterion was missing in base", () => {
-    // Base formatMetricsAsMarkdown from PR #170 (commit 22233f18) ended with Arabic share:
-    const baseMarkdown = [
-      "# Pilot Metrics",
-      "| Metric | Value |",
-      "| Share of users who switched to Arabic | 0% (not tracked) |",
-    ].join("\n");
-
-    // On base: Staging uptime is missing
-    expect(baseMarkdown.includes("Staging uptime")).toBe(false);
-
-    // On head: Staging uptime is explicitly reported with external probe explanation
-    const headMarkdown = formatMetricsAsMarkdown(empty, FROM, TO);
-    expect(headMarkdown).toContain("| Staging uptime | " + NOT_TRACKED_UPTIME + " |");
-    expect(headMarkdown).toContain("measured via external /api/health probe");
+  it("AC3: formats staging uptime metric using NOT_TRACKED_UPTIME documenting external /api/health probe", () => {
+    const md = formatMetricsAsMarkdown(empty, FROM, TO);
+    expect(md).toContain("| Staging uptime | " + NOT_TRACKED_UPTIME + " |");
+    expect(NOT_TRACKED_UPTIME).toContain("/api/health");
   });
 });
 
 describe("pilot-metrics: collectPilotMetrics and queries", () => {
+  it("AC4: propagates a 0 success rate from run metrics query to PilotMetrics", async () => {
+    let callIndex = 0;
+    const mockDb = {
+      execute: async () => {
+        callIndex++;
+        if (callIndex === 1) return { rows: [{ signups: 0, median_hours_to_verified: null }] };
+        if (callIndex === 2) return { rows: [{ count: 0 }] };
+        if (callIndex === 3) return { rows: [{ count: 0 }] };
+        if (callIndex === 4) return { rows: [{ success_rate: 0, p95_queue_to_start_ms: null }] };
+        if (callIndex === 5) return { rows: [{ count: 0 }] };
+        if (callIndex === 6) return { rows: [{ count: 0 }] };
+        if (callIndex === 7) return { rows: [{ count: 0 }] };
+        if (callIndex === 8) return { rows: [{ count: 0 }] };
+        return { rows: [] };
+      },
+    } as unknown as Queryable;
+
+    const metrics = await collectPilotMetrics(mockDb, FROM, TO);
+    expect(metrics.runSuccessRate).toBe(0);
+    const md = formatMetricsAsMarkdown(metrics, FROM, TO);
+    expect(md).toContain("| Run success rate | 0.0% |");
+  });
+
   it("AC1 & AC2: propagates scheduled runs and duplicate runs from queryable to PilotMetrics", async () => {
     let callIndex = 0;
     const mockDb = {
@@ -200,12 +135,14 @@ describe("pilot-metrics: collectPilotMetrics and queries", () => {
     } as unknown as Queryable;
 
     const metrics = await collectPilotMetrics(mockDb, FROM, TO);
+    expect(metrics.runSuccessRate).toBe(0.95);
     expect(metrics.webhookRuns).toBe(20);
     expect(metrics.scheduledRuns).toBe(12);
     expect(metrics.approvals).toBe(4);
     expect(metrics.duplicateWebhookRuns).toBe(2);
 
     const md = formatMetricsAsMarkdown(metrics, FROM, TO);
+    expect(md).toContain("| Run success rate | 95.0% |");
     expect(md).toContain("| Scheduled runs | 12 |");
     expect(md).toContain("| Duplicate webhook runs | 2 |");
     expect(md).toContain("| Staging uptime | " + NOT_TRACKED_UPTIME + " |");
