@@ -358,6 +358,21 @@
         "nurture": "Nurture"
       }
     },
+    "deal-won-mizano-quote": {
+      "name": "Deal won → Mizano quote",
+      "description": "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+      "sample": "One won deal with customer details, currency and line items.",
+      "result": "A customer and a draft quote created in Mizano once approved, and a Slack notification sent.",
+      "nodes": {
+        "deal": "Deal",
+        "won": "Deal won?",
+        "prepare": "Prepare customer and quote",
+        "customer": "Mizano — Create customer (needs approval)",
+        "quote": "Mizano — Create draft quote",
+        "notify": "Slack — Quote ready",
+        "skipped": "Deal not won"
+      }
+    },
     "ticket-priority": {
       "name": "Ticket Priority Router",
       "description": "Score a support ticket by keywords and route urgent ones to an escalation output.",
@@ -543,6 +558,19 @@
         "low": "Any scores of 2 or less?",
         "review": "Summary with low scores",
         "scores": "Score summary"
+      }
+    },
+    "eta-invoice-notify": {
+      "name": "ETA Invoice Notify",
+      "description": "Pick the invoices still waiting for Egyptian Tax Authority (ETA) submission and list them for the team to follow up. Nothing is submitted or sent.",
+      "sample": "A batch of invoices, each with a number, a customer, a total and a status.",
+      "result": "The invoices waiting for ETA submission, or a note that none are waiting.",
+      "nodes": {
+        "trigger": "Invoice batch",
+        "pick": "Pick waiting invoices",
+        "any": "Any waiting?",
+        "follow-up": "Follow-up list",
+        "clear": "All submitted"
       }
     }
   },

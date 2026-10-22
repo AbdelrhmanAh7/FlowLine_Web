@@ -95,6 +95,19 @@ describe("template step labels and names", () => {
     expect(templateNodeLabel(ar, "no-such-template", node)).toBe("Custom step");
     expect(templateName(ar, { id: "no-such-template", name: "Mine" })).toBe("Mine");
   });
+
+  it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242)", () => {
+    expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won → Mizano quote");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toMatch(ARABIC);
+    for (const key of ["description", "sample", "result"] as const) {
+      expect(en.has(`localTemplates.deal-won-mizano-quote.${key}`)).toBe(true);
+      expect(ar.has(`localTemplates.deal-won-mizano-quote.${key}`)).toBe(true);
+    }
+    const enNodeKeys = Object.keys(enNodes("localTemplates", "deal-won-mizano-quote"));
+    const arNodeKeys = Object.keys(arNodes("localTemplates", "deal-won-mizano-quote"));
+    expect(enNodeKeys.length).toBeGreaterThan(0);
+    expect(enNodeKeys).toEqual(arNodeKeys);
+  });
 });
 
 describe("integration catalog text", () => {
@@ -109,7 +122,13 @@ describe("integration catalog text", () => {
       expect(providerDescription(en, p)).toBe(p.description);
 
       for (const a of p.actions) {
-        expect(ar.has(`integrationCatalog.${a.id.replace(".", ".actions.")}.title`), a.id).toBe(true);
+        const key = `integrationCatalog.${a.id.replace(".", ".actions.")}`;
+        // Both catalogues must carry the key by id: the actionText()/providerDescription() fallback returns the
+        // provider's English literal, so `actionTitle(en, a)` alone would hide a missing English entry.
+        expect(ar.has(`${key}.title`), `${a.id} ar title`).toBe(true);
+        expect(ar.has(`${key}.description`), `${a.id} ar description`).toBe(true);
+        expect(en.has(`${key}.title`), `${a.id} en title`).toBe(true);
+        expect(en.has(`${key}.description`), `${a.id} en description`).toBe(true);
         expect(actionTitle(ar, a), a.id).toMatch(ARABIC);
         expect(actionDescription(ar, a), a.id).toMatch(ARABIC);
         expect(actionTitleById(ar, a.id)).toBe(actionTitle(ar, a));

@@ -68,6 +68,19 @@ The start job that wrote the keyword into the PR body lives in the hub (`nql-age
 
 ---
 
+## Paid-pilot owner actions scaffolding (PP-02..PP-09)
+
+Non-sensitive scaffolding for paid-pilot owner actions PP-02..PP-09 is defined in [`src/types/ownerActions.ts`](../../src/types/ownerActions.ts) with unit test coverage in [`tests/unit/ownerActions.test.ts`](../../tests/unit/ownerActions.test.ts).
+
+This scaffolding provides:
+- TypeScript type definitions: `OwnerActionId`, `OwnerActionStatus` (`"pending" | "done" | "blocked"`), `OwnerActionBlockedBy` (`"money" | "legal" | "people"`), `OwnerActionRow`, and `OwnerActionsStatusResponse`.
+- A read-only contract stub (`OWNER_ACTIONS_PP_ROWS`, `getOwnerActionsStatusStub()`) with static checklist rows marked honestly as `blocked` or `pending` (no fake success states, no mutation endpoints, and no provider calls).
+
+**Strict owner-only boundaries:**
+Payments, pricing calculations, legal terms, credentials, and user contact remain strictly owner-only (tracked in #30 and #162, referenced with `Refs #30` and `Refs #162`). Engineers must not implement real payment processing, pricing logic, legal terms, or user contact workflows.
+
+---
+
 ## Pending owner checks — 2026-10-03
 
 These checks remain unverified from the repository. Confirm the running app and account before using the local URLs below; no browser session or listener was checked in this docs pass. Record only non-secret completion state; no passwords, OTPs, recovery codes, seeds or provider secrets belong in chat.
@@ -81,7 +94,7 @@ These checks remain unverified from the repository. Confirm the running app and 
 2. **Owner admin bootstrap and TOTP enrolment**
    - Purpose: establish the protected platform administrator account and complete its authenticator setup.
    - Page: `http://localhost:3000/admin/setup` in the same local app.
-   - Owner action: redeem a privately issued bootstrap code and complete setup; the operator command is `node scripts/with-env.mjs .env pnpm exec tsx scripts/admin/bootstrap.mts --email <owner>`. Run it in a clean shell (see [MIGRATION.md step 3](../ai/MIGRATION.md)): `with-env.mjs` never overrides variables already set, so an inherited `DATABASE_URL` would target another database. Enter codes only in the page and keep seeds and recovery codes private.
+   - Owner action: redeem a privately issued bootstrap code and complete setup; the operator command is `node scripts/with-env.mjs .env pnpm exec tsx scripts/admin/bootstrap.mts --email "$OWNER_EMAIL"`. Run it in a clean shell (see [MIGRATION.md step 3](../ai/MIGRATION.md)): `with-env.mjs` never overrides variables already set, so an inherited `DATABASE_URL` would target another database. **Define `OWNER_EMAIL` first**, e.g. `export OWNER_EMAIL="you@example.com"`, then run the command. Enter codes only in the page and keep seeds and recovery codes private.
    - Claude verifies after: the page's completed setup state and access to the protected admin area, without viewing or recording authenticator material.
 
 3. **Reconcile the existing merge and review evidence**

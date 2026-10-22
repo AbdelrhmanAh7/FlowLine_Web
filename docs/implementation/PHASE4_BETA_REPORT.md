@@ -1,5 +1,32 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+
+## Pilot E2E failure corrections — 2026-10-15
+
+Local branch `fix/pilot-e2e-failures`; owner requested local changes/commit only, no push/PR or hub edits.
+Two product defects fixed: run input's JSONB storage reordered CSV columns at the queue boundary
+(migration 0027 now stores JSON), and copy-page metadata exposed the restricted page title despite a
+404 content check (metadata now checks platform-admin authorization before translation).
+The admin root also withholds privileged metadata from denied users. Auth/2FA checks are unchanged.
+
+The reported `fl-flow-versions.1` expectation `[2,1]` contradicts the deliberate #204 CTO decision
+below: save snapshots are unnumbered; only publications receive numbers. Product behavior is retained.
+Local regression tests assert two saves yield null numbers, `save` reasons and descending revisions;
+the repository's feature E2E expectation is corrected. Read-only hub reference remains unchanged and
+will still fail this outdated assertion until its owner updates it.
+
+Evidence and commands: [pilot E2E report](../../artifacts/pilot-e2e/EVIDENCE.md). Integration regressions
+cover manual sample input and explicit run input through persistence and the real worker, and denied
+admin content plus metadata for anonymous/non-admin/API-key callers. Existing JSONB row key order
+cannot be reconstructed by migration. No production/provider verification is claimed. GitHub tracking,
+CI and review are deferred to the harness under the owner's worktree-only/no-push/no-PR instruction;
+this local commit is not a merge-ready or CI-gated claim.
+
+
+## route() error-header unit coverage (issue #234) — 2026-10-15
+
+PR #200 landed on main as `d1368116`; its implementation is now inherited from main. The active (unskipped) unit suite covers `HttpError` 403, `ZodError` 400, plain `Error` 500, and a cookie-bearing POST with an evil Origin and no `sec-fetch-site`. Each checks the status, error code and both headers; the CSRF case also proves the handler never runs. This is test-only coverage; no new user flow or dependency is introduced. Local verification after integrating main: `nice -n 10 pnpm exec vitest run tests/unit/route-error-headers.test.ts --maxWorkers=2` — 4 passed, none skipped; `pnpm typecheck` and `pnpm lint` — exit 0. Full suite/build remain for hosted CI.
+
 ## Legacy backfill 0026 (issue #205) — 2026-10-14
 
 Migration `0026_flow_version_run_backfill` backs up numbered non-publication snapshots before clearing their numbers;
@@ -22,7 +49,13 @@ Not merge-ready: #207 is still open. PR #253 still targets main; GitHub rejected
 already has that base/head pair. The harness must reconcile the duplicate PRs, keep this work stacked until #207 lands,
 then rebase onto main and obtain new green CI and CodeRabbit confirmation. No push or review-thread resolution was made.
 
-## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-13
+## Flows list publishedVersion only changes on publish (issue #204, PR #207) — 2026-10-15
+
+The fix and migration below are already on main via `83a80114` (#253). Revalidation adds isolated numbering coverage,
+a deterministic two-connection publish/unique-index regression, and fixes the legacy fixture so 0025 actually clears numbers.
+The issue and feature API E2E tests pass 2/2 on the isolated dev stack; authenticated EN/AR routes return 200.
+Exact hub production-stack validation, hosted CI and review confirmation remain pending. [Current evidence](../../artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15).
+The following results are historical (2026-10-13):
 
 Fix for the `feat:fl-flows-list` failure (#117): a run's pinned `flow_version` snapshot took the next number of the
 per-flow sequence, so two runs before the first publish made it v3 instead of v1. Per the CTO decision on PR #207, only
@@ -38,9 +71,11 @@ Verified locally on a freshly migrated `flowline_test_204`: `tests/integration/r
 keeps publishedVersion 1; saves and an overwrite before the first publish give v1; publish, save, overwrite, two runs,
 then publish gives v2; the save/overwrite tests fail without the `insertVersion` change),
 `tests/integration/flow-version-backfill.test.ts` (legacy save/overwrite/run numbers nulled, published number and its
-subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`,
-`pnpm typecheck` and eslint on the changed files. e2e-army: the branch spec `e2e-army/117-flows-list-dashboard.e2e.ts` passes 1/1 against a
-stack built from `c95f8b5`; the hub's `--tag feat:fl-flows-list` run has no hub test with that tag yet (`NO_TESTS`).
+subflow lookup kept, trigger back on), `tests/integration/flows.test.ts`, `tests/unit/flow-version-label.test.ts`.
+e2e-army tooling and hygiene (`tests/unit/e2e-army-tooling.test.ts`, 12/12 passed): `e2e-army/117-flows-list-dashboard.e2e.ts`
+uses `expect.poll` (no fixed `setTimeout` delay) and passes 1/1 against a stack built from `c95f8b5`; top-level e2e-army files
+stay within the 8-file cap by consolidating the Mizano integration actions spec (`148` into `147`).
+`pnpm typecheck` and eslint on the changed files are clean.
 Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follow-up issue (not filed
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
@@ -84,6 +119,12 @@ checks used Node 26.10.0; the project's supported Node 24 validation remains for
 
 `source-map-js` 1.2.1 (GHSA-68fv-2mgg-jv7q, high; CSS build and test tooling only, no Flowline source imports it) is raised by the override `"source-map-js": ">=1.2.2 <2"` in `pnpm-workspace.yaml`; the lockfile was regenerated with `pnpm install --lockfile-only` and resolves only 1.2.2. Guarded by `tests/unit/dependency-advisories.test.ts`; details in [DEPENDENCIES.md](../security/DEPENDENCIES.md), evidence in [artifacts/phase-4/issue-62/EVIDENCE.md](../../artifacts/phase-4/issue-62/EVIDENCE.md). **Pending after PR #77 merges:** alert #3 closed as `fixed` and the open-alert query checked ([NEXT_ACTION.md](../../NEXT_ACTION.md) step 5). Open alerts #4–#17 (`next`, `shell-quote`, `sharp`) are newer and not covered here. This changes no private-beta or production acceptance.
 
+## Account deletion vs the user's own SSO sign-in: lock-order test — 2026-10-12 (issue #108, part 1 of #47)
+
+`tests/integration/account-delete-sso-lock-order.test.ts` runs the real `consumeAccountToken("delete")` and `completeSso` for one user on two PostgreSQL connections, in both orders, and requires both to settle without `40P01`. This is a **regression test** for the lock ordering fix from issue #109 (PR #216, commit `d86fb7d7`): the fix made `consumeAccountToken("delete")` lock the user row and write its `account.deleted` audit rows before locking workspaces `FOR UPDATE`, matching the SSO transaction order.
+
+**Acceptance criteria & history (#108 / #109):** Issue #108 originally called for an integration test that "reliably fails due to the lock ordering". The test was created on branch `ai/108` along with helper `tests/integration/pg-lock-helpers.ts`. When issue #109 (PR #216) implemented the lock-reordering fix in `src/server/email/flows.ts`, it copied `account-delete-sso-lock-order.test.ts` and `pg-lock-helpers.ts` verbatim from `ai/108` to satisfy its own verification ("passes the deadlock test"), and PR #216 was merged to `main` first (commit `d86fb7d7`). Authored on `ai/108`, copied into PR #216, the test serves as a regression guard on `main` verifying that both orders complete without deadlock (2/2 pass without `40P01`). The test guards against the lock-ordering deadlock hazard described in its header (in the SSO-first order prior to commit `d86fb7d7` / parent `83c7bb8e`, deletion held the workspace row and waited at `delete from "user"`, while the in-flight SSO transaction held the user row and needed a key-share lock on that workspace). No execution against the pre-fix parent commit `83c7bb8e` is recorded here; validation confirms that both orders finish without deadlock on the current codebase. `routeTransactions` is exported from `pg-lock-helpers.ts` and reused across `account-delete-sso-lock-order.test.ts` and `federated-lock-order.test.ts`. Local verification against a throwaway `flowline_test_i108` database: `tests/integration/account-delete-sso-lock-order.test.ts` (2/2 pass), `tests/integration/federated-lock-order.test.ts` (2/2 pass), eslint on the changed files, `pnpm typecheck` (`tsc --noEmit`), and the `.husky/pre-push` check suite (134/134 files, 1780 tests pass). CI remains the gate. No full gate or browser run is claimed here; this changes no beta or production acceptance. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
+
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
 The fixed note added to every refund/cancellation draft (`REFUND_NOTE`, ar/en in `src/company-builder/packs/customer-follow-up.ts`) named "a member of our team" instead of who decides; it now names the business **owner** as the decision maker for that specific request and still promises no outcome (no refund, cancellation or approval announced or implied). Copy and lock: [COPY_REVIEW.md](../company-builder/COPY_REVIEW.md); bug ledger FB-14: [BUGS.md](../../artifacts/company-builder/BUGS.md). Scorer noPromise checks (`flowline-field/field.spec.ts`) globally exclude the updated note sentence via replaceAll so refunded/cancelled terms do not trigger false positives on VP-05/VP-06 across single or repeated note drafts. Verified locally with the unit REF-*/REF-NOTE tests in `tests/unit/cb-pack-customer-follow-up.test.ts`, `tests/unit/i18n.test.ts` and `pnpm typecheck`. No integration, browser, build or full-gate run is claimed here, and this changes no private-beta or production acceptance.
@@ -94,9 +135,13 @@ Issue #36: the four local focused-run helpers (`upload-admission/run-focused.mjs
 
 ## H3 security readiness review — 2026-10-03
 
-PR #21 (H3, open; its base PR #17 is merged into main) enforces local MFA across all session reads, refuses replayed TOTP codes at both federated gates, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. It is not merged or deployed. This update does not change private-beta or production acceptance. Issue #37 (a possible lock-order inversion between SSO link confirmation and federated challenge completion, which share the initiating session) is fixed in source by one documented lock order and a shared helper ([Lock order](../security/FEDERATED_MFA.md#lock-order)); the mocked-order unit test passes locally, the two-connection PostgreSQL regression `tests/integration/federated-lock-order.test.ts` is **not executed** locally and needs CI. Of two adjacent inversions found while auditing, the member role change/removal one (against the SSO audit insert) is still recorded there as a known gap. The other, password reset against account-deletion confirmation, is fixed by issue #45: verify, reset and delete confirmation now lock the user row before the token row and re-check the token under both locks ([Email-token lock order](../security/FEDERATED_MFA.md#email-token-lock-order)); its mocked-order unit test passes locally, the two-connection PostgreSQL test `tests/integration/email-token-lock-order.test.ts` is **not executed** locally and needs CI. Issue #66 adds a route-level H3 regression lock, `tests/integration/sec-federated-mfa-regression.test.ts` ([what it covers](../security/FEDERATED_MFA.md#validation-limits)), executed locally against a disposable PostgreSQL; it changes no production behaviour and no readiness verdict.
+PR #21 (H3, open; its base PR #17 is merged into main) enforces local MFA across all session reads, refuses replayed TOTP codes at both federated gates, retains pending global-provider/account and workspace revocation fences, and documents the sign-in transition for existing enrolled users. [Behavior](../security/FEDERATED_MFA.md); [checks and source fingerprint](../../artifacts/phase-4/h3-readiness/README.md). Focused unit checks are separate from PostgreSQL integration, browser/provider validation and main-target CI, which remain pending. It is not merged or deployed. This update does not change private-beta or production acceptance. Issue #37 (a possible lock-order inversion between SSO link confirmation and federated challenge completion, which share the initiating session) is fixed in source by one documented lock order and a shared helper ([Lock order](../security/FEDERATED_MFA.md#lock-order)); the mocked-order unit test passes locally, and the two-connection PostgreSQL regression `tests/integration/federated-lock-order.test.ts` ran locally on 2026-10-12 against a throwaway PostgreSQL database for #108, and CI is the gate. Of two adjacent inversions found while auditing, member role change/removal against the SSO audit insert (#42: the workspace row was locked `FOR UPDATE`, which conflicts with the key-share lock of the `audit_event` foreign key, while the SSO transactions held the member row) is fixed in source by locking it `FOR NO KEY UPDATE` ([Member changes](../security/FEDERATED_MFA.md#lock-order)); the mocked-order unit test `tests/unit/member-lock-order.test.ts` passes locally, the two-connection regression `tests/integration/member-lock-order.test.ts` **passed locally (5 tests) against a throwaway `flowline_test_46` database via `scripts/with-env.mjs`**; the other integration files were not run locally and CI runs them. Password reset against account-deletion confirmation, is fixed by issue #45: verify, reset and delete confirmation now lock the user row before the token row and re-check the token under both locks ([Email-token lock order](../security/FEDERATED_MFA.md#email-token-lock-order)); its mocked-order unit test passes locally, the two-connection PostgreSQL test `tests/integration/email-token-lock-order.test.ts` is **not executed** locally and needs CI. Account deletion still takes workspace locks `FOR UPDATE` and is outside #42; after #45 it locks the user first, so the earlier same-user SSO/audit gap description no longer applies. Issue #66 adds a route-level H3 regression lock, `tests/integration/sec-federated-mfa-regression.test.ts` ([what it covers](../security/FEDERATED_MFA.md#validation-limits)), executed locally against a disposable PostgreSQL; it changes no production behaviour and no readiness verdict.
 
-Issue #72 adds a bounded failure audit for failed and abandoned federated MFA steps (workspace `sso.mfa_failed`, platform `signin.mfa_failed`; reasons `invalid_code`, `replayed_code`, `rate_limited`, `expired`, the last also from the retention sweep), see [Failure audit](../security/FEDERATED_MFA.md#failure-audit); its tests extend the #66 file and pass locally against a disposable PostgreSQL 16. The two known lock-order gaps above are unchanged. It changes no readiness verdict and is not deployed.
+Issue #72 adds a bounded failure audit for failed and abandoned federated MFA steps (workspace `sso.mfa_failed`, platform `signin.mfa_failed`; reasons `invalid_code`, `replayed_code`, `rate_limited`, `expired`, the last also from the retention sweep), see [Failure audit](../security/FEDERATED_MFA.md#failure-audit); its tests extend the #66 file and pass locally against a disposable PostgreSQL 16. It does not change the lock order or the lock-order known gaps above. It changes no readiness verdict and is not deployed.
+
+### PR #46 review follow-up — 2026-10-11
+
+Merged `origin/main` at `6aa89ed` into `claude/issue-42`, preserving #42 membership locks and #45 email-token locks and reconciling their documentation. The three queued comments affirm the implementation and identify no code defect; no runtime change was made for them. Focused local verification: `pnpm exec vitest run --project unit tests/unit/member-lock-order.test.ts tests/unit/federated-lock-order.test.ts tests/unit/email-token-lock-order.test.ts tests/unit/docs-index.test.ts` passed (4 files, 22 tests). PostgreSQL integration and the full suite were not run in this follow-up; CI must verify the merged candidate. Round 5 (QA): the rank table in [lock-order.md](../engineering/lock-order.md) was reordered to the order the code takes the locks (user, email token, session, account, workspace, member, audit) and its backward sequences (reset writes account before session; the audit insert key-share locks the workspace after the member row) are written down as exceptions with the reason each cannot deadlock; `tests/unit/lock-order-doc.test.ts` pins the table. The `FOR NO KEY UPDATE` conflict list now includes `FOR SHARE`. The `tests/integration/member-lock-order.test.ts` file runs in the `checks` integration shards on CI; its pass on the final head must be confirmed there. Round 8 (merge conflict): merged the local `origin/main` ref (`d136811`; a fetch was blocked by the sandbox, so later main commits are not included) into the branch; the conflicts were only in [lock-order.md](../engineering/lock-order.md) and [FEDERATED_MFA.md](../security/FEDERATED_MFA.md). Both keep this PR's rank table and #42 fix, and take main's additions: the #241 account-after-member gap (tracked, not fixed here), the #109 note that `delete` inserts its audit rows before its workspace locks, and the scope sentence on implicit locks. The `changeRole`/`removeMember` known gap main still listed is removed because this fix closes it. Focused local run, serial: `pnpm exec vitest run "$FILE"` for `tests/unit/lock-order-doc.test.ts` (3 tests), `tests/unit/member-lock-order.test.ts` (6), `tests/unit/sso-callback-lock-order.test.ts` (2), `tests/unit/password-reset-lock-order.test.ts` (6) and `tests/unit/federated-lock-order.test.ts` (4) all passed. `tests/integration/member-lock-order.test.ts` also passed locally (5 tests) against a throwaway `flowline_test_46` database via `scripts/with-env.mjs`, its first real execution; the other integration files were not run locally and CI runs them. The Stop hook's `vitest related` run fails on integration files at `global-setup.ts` because it passes no `DATABASE_URL`; that is the hook's environment, not a test failure. Round 10 (merge conflict): merged latest `origin/main` into `claude/issue-42`; verified `tests/unit/lock-order-doc.test.ts` (3 tests), `tests/unit/member-lock-order.test.ts` (6 tests), `tests/unit/docs-index.test.ts` (4 tests), `tests/integration/member-lock-order.test.ts` (5 tests passed against `flowline_test_46`), `pnpm lint` and `pnpm typecheck` (clean, exit code 0). Round 11 (review threads): addressed review board comments across `src/server/members.ts:131,159`, `tests/integration/member-lock-order.test.ts:1`, and `tests/unit/member-lock-order.test.ts:1`; verified unit tests, integration tests against `flowline_test_46`, lint, and typecheck. Round 12 (QA & review cleanup): deduplicated `routeTransactions` and `TransactionRunner` in `tests/integration/member-lock-order.test.ts` by importing from `./pg-lock-helpers`; relaxed markdown substring assertions in `tests/unit/lock-order-doc.test.ts`; extended `tests/unit/member-lock-order.test.ts` to assert HTTP 404 on missing member across both `changeRole` and `removeMember`; verified all unit tests, lint, and typecheck. Round 13 (QA review findings): exported and directly verified `lockWorkspaceMembership` (AC1); added explicit AC4 test demonstrating `FOR UPDATE` causes deadlocks while `FOR NO KEY UPDATE` avoids them in `tests/unit/member-lock-order.test.ts` (8 tests); updated `docs/DEVELOPER_GUIDE.md` security regression and integration examples to reference `member-lock-order.test.ts`; aligned `Known violations` in `docs/engineering/lock-order.md` noting V1 is resolved by #42; verified unit tests, lint, and typecheck (all exit 0). Round 14 (CodeRabbit review threads & merge): merged latest `origin/main` into `claude/issue-42`; updated `docs/engineering/lock-order.md` and `tests/unit/lock-order-doc.test.ts` to remove the obsolete reset exception (session deletion precedes credential account writes per #41), clarified that user `FOR SHARE` is not a complete ordering fence, and corrected V1 sequence in Known Violations to `Member (6) → Workspace key-share (5) during SSO audit insert (7)`; verified unit tests, lint, and typecheck (all exit 0).
 
 ## PR #14 diagnostic checkpoint — 2026-10-03
 
@@ -266,6 +311,52 @@ See `BETA_LIMITATIONS.md`:
 - no presence or light theme;
 - privacy docs are drafts pending qualified review.
 
+## Issue #161 — security documentation review follow-up (2026-10-13)
+
+AGENTS.md and the PR template document security posture; OWNER_ACTIONS.md remains the single record of unverified owner security settings. Dependency work is separately tracked in #62 per the CTO answer. When acceptance criteria are deferred to a follow-up issue, PRs must use non-closing references (`Refs #N`), and linkage is verified against the live PR body (`gh pr view YOUR_PR_NUMBER --json body,closingIssuesReferences`). No security setting was changed.
+
 ## Test coverage note: hub route selection (#174)
 
 `tests/unit/selection.spec.test.ts` tests the real exports of `src/ai/hub/selection.ts` (`assertRoutesUsable`, `assertRouteSelection`, `aiRoutesIn`, `pinDefaultRoutes`). Issue #174 named `selectEngineByScore` and `selectFreeEndpoint`, which never existed in this repo (`git log --all -S "selectEngineByScore" -- src` is empty), so per the CTO decision on PR #183 the file's first test pins the module's export list. Acceptance with this repo's Vitest, since Jest's `--listTests` is rejected as an unknown option: `pnpm exec tsc --noEmit && pnpm exec vitest list --project unit --filesOnly | grep selection.spec`. A second test keeps the commands in the file header and in this note literal: it fails on any angle-bracket placeholder, which a POSIX shell would parse as an input redirection.
+
+## PR #287 local CI repair — 2026-10-16
+
+Merged main `131235b9` into the pilot branch (merge `b5765988`), preserving both NEXT_ACTION entries.
+Main ends at migration 0026; 0027 needs no renumbering. `pnpm db:generate` reports no drift;
+all 28 migrations applied to fresh `flowline_test_pr287_migrations` on localhost:5432,
+and `run.input` is `json`. CI run 38792754200 attempt 2 failed the demo cross-process lock test:
+readiness preceded SIGTERM handler registration. The test now registers cleanup first and
+always terminates/awaits the child in finally. No production lock semantics changed.
+Local lint/typecheck pass; unit results: 1759 passed, 1 conditional skip (1760 total),
+131 files. The pre-existing skip is the DEMO_MEDIA-only placeholder assertion instantiated
+for DEVELOPER_GUIDE by describe.each; no failure was skipped by this repair.
+No push, GitHub writes, dependency changes, secrets or permission changes.
+
+
+## CSV build keeps later-row columns (issue #251) — 2026-10-19
+
+`data.csv` build mode (`src/engine/execute.ts:335-342`) now builds the header from every row's keys in first-seen order;
+before, `Papa.unparse` used row 1 only and dropped columns that first appear later. Regression test:
+`tests/unit/engine-v2.test.ts` (fails on base, passes on head). The jsonb→json run input change that fixed the
+gate's `qty,name` ordering is already on main (`39364b5d`, migration 0027). Local e2e-army run not possible
+(sandbox); see `artifacts/phase-4/issue-251/EVIDENCE.md`.
+
+## Pilot metrics: run success rate 0.0% formatting (issue #316) — 2026-10-20
+
+Fixed truthiness check bug on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263`.
+Previously, `metrics.runSuccessRate ? ... : "N/A"` evaluated a true `0` success rate (when every
+finished run in the cohort failed) as falsy, outputting `"N/A"` instead of `"0.0%"`.
+Using `metrics.runSuccessRate != null` ensures that `0` correctly formats as `"0.0%"`, while `null`
+(no finished runs) outputs `"N/A"`.
+Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and integration
+tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
+Regression tested against base failure. Supersedes part of #170.
+
+## i18n: Deal won → Mizano quote gallery strings (issue #242) — 2026-10-20
+
+Added `localTemplates.deal-won-mizano-quote` EN and AR entries to message catalogs (`src/i18n/messages/en.json` and `src/i18n/messages/ar.json`).
+Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result`, and `nodes` (`deal`, `won`, `prepare`, `customer`, `quote`, `notify`, `skipped`).
+Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
+Subtask of #149.
+
+
