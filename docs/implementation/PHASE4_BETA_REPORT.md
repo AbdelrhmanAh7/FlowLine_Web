@@ -359,4 +359,15 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Account security page: QR code for the authenticator app (issue #198 / #294) — 2026-10-22
+
+Added client-side SVG QR code rendering (`TotpQr` using `qrcode.react` 4.2.0) to the account security two-step verification enrolment view (`/account/security`).
+- Browser-side rendering: `QRCodeSVG` draws the `otpauth://` URI completely in the browser, preventing secrets from reaching third-party hosts or external QR generators.
+- Layout & Theme contrast: Rendered in a white padded container (`bg-[white] p-3`, `size={168}`, `level="M"`, `aria-hidden="true"`) directly above the manual secret key, ensuring high contrast for scanning apps across light and dark themes.
+- Enrolment lifecycle: Displayed only during active enrolment after submitting the account password. Cleared immediately upon clicking "Cancel" or submitting the 6-digit confirmation code.
+- Arabic / RTL support: Respects RTL boundaries within the account container without causing viewport overflow.
+- Standalone tests: Added natural language test in `e2e-army/198-totp-qr.e2e.ts` (tagged `feat:fl-auth-api`), unit tests in `tests/unit/api-error-shape.test.ts` and `tests/unit/totp-qr.test.ts`, and Playwright E2E coverage in `e2e/account-security.spec.ts`.
+Supersedes #278. Closes #198.
+
+
 

@@ -133,6 +133,7 @@
     "resetPassword": "Reset password",
     "resendVerification": "Resend verification",
     "deleteAccount": "Delete account",
+    "accountSecurity": "Account security",
     "billingCheckout": "Checkout"
   },
   "common": {
@@ -241,6 +242,7 @@
     },
     "beta": "Beta",
     "userMenu": {
+      "security": "Security",
       "signOut": "Sign out",
       "reportIssue": "Report an issue",
       "contactSupport": "Contact support",
@@ -2327,6 +2329,22 @@
       "failed": "Couldn't complete the request. Try again.",
       "rate": "Too many requests. Try again in an hour.",
       "noToken": "This link has no valid token."
+    },
+    "security": {
+      "title": "Security",
+      "back": "Back to Flowline",
+      "twoFactor": {
+        "title": "Two-step verification",
+        "on": "On",
+        "off": "Off",
+        "enable": "Enable",
+        "cancel": "Cancel",
+        "password": "Account password",
+        "passwordInvalid": "That password isn't correct.",
+        "secret": "Secret key (add it to your authenticator app)",
+        "backupCodes": "Backup codes — shown only once, store them offline.",
+        "confirm": "Confirm and turn on"
+      }
     },
     "settings": {
       "title": "Your account",
