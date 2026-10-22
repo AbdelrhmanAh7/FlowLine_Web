@@ -9,6 +9,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import testStackEnv from "./test-stack.cjs";
 
+// Pure validators and argv builders exported for unit testing; script execution is guarded by import.meta.url.
 export function validatePid(pid) {
   const s = String(pid ?? "").trim(), n = Number(s);
   if (!/^[0-9]{1,7}$/.test(s) || n <= 1) throw new Error(`Invalid PID: ${JSON.stringify(pid)}`);
@@ -43,13 +44,8 @@ export function buildPowerShellArgs(ports, singlePort = null) {
 export function buildStackArgs(stackName) { return ["--filter", `name=${validateStackName(stackName)}`]; }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-const envPid = process.env.FLOWLINE_TEST_PID || process.env.PID;
-if (envPid) {
-  try { validatePid(envPid); } catch (e) { console.error(`Invalid PID in environment: ${e.message}`); process.exit(1); }
-}
-const envStack = process.env.FLOWLINE_TEST_STACK || process.env.STACK_NAME;
-if (envStack) {
-  try { validateStackName(envStack); } catch (e) { console.error(`Invalid stack name in environment: ${e.message}`); process.exit(1); }
+if (process.env.FLOWLINE_TEST_PID) {
+  try { validatePid(process.env.FLOWLINE_TEST_PID); } catch (e) { console.error(`Invalid PID in environment: ${e.message}`); process.exit(1); }
 }
 try {
   process.loadEnvFile(".env.test");
@@ -69,6 +65,13 @@ const PORT = validatePort(stack.port);
 const PORTS = [PORT, validatePort(stack.fakePort), validatePort(stack.aiPort)];
 // A non-default stack may run beside the default stack, so process cleanup must stay scoped to its test port.
 const single = !process.env.FLOWLINE_TEST_PORT || PORT === 3100;
+const run = (file, args) => {
+  try {
+    return execFileSync(file, args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    return "";
+  }
+};
 
 /** Linux: pids of this stack's launcher / marked worker / fakes / next, found by FLOWLINE_TEST_PORT in their environment. */
 const stackPids = () => {
@@ -93,27 +96,16 @@ const stackPids = () => {
 // CodeQL [js/incomplete-sanitization] (alert #4): No string replace sanitization; arguments passed directly as argv elements.
 // CodeQL [js/shell-command-injection-from-environment] (alert #13): Validated argv arrays without shell execution. See docs/security/codeql-triage-scripts.md
 if (process.platform === "win32") {
-  try { execFileSync("powershell", buildPowerShellArgs(single ? [PORT] : PORTS, single ? PORT : null), { stdio: ["ignore", "pipe", "ignore"] }); } catch {}
+  run("powershell", buildPowerShellArgs(single ? [PORT] : PORTS, single ? PORT : null));
 } else {
   const owned = stackPids();
-  if (envPid) owned.push(validatePid(envPid));
   for (const p of PORTS) {
-    try {
-      const out = execFileSync("lsof", buildLsofArgs(p), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
-      const pids = out.split(/\s+/).map((s) => s.trim()).filter(Boolean).map(validatePid);
-      if (pids.length) execFileSync("kill", buildKillArgs(pids), { stdio: ["ignore", "pipe", "ignore"] });
-    } catch {}
-    try { execFileSync("fuser", buildFuserArgs(p, { kill: true }), { stdio: ["ignore", "pipe", "ignore"] }); } catch {}
+    const pids = run("lsof", buildLsofArgs(p)).split(/\s+/).map((s) => s.trim()).filter(Boolean).map(validatePid);
+    if (pids.length) run("kill", buildKillArgs(pids));
+    run("fuser", buildFuserArgs(p, { kill: true }));
   }
-  if (owned.length) {
-    try { execFileSync("kill", buildKillArgs(owned), { stdio: ["ignore", "pipe", "ignore"] }); } catch {}
-  }
+  if (owned.length) run("kill", buildKillArgs(owned));
 }
-const isPortInUse = (p) => {
-  try { if (execFileSync("fuser", buildFuserArgs(p), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim()) return true; } catch {}
-  try { if (execFileSync("lsof", buildLsofArgs(p), { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim()) return true; } catch {}
-  return false;
-};
-const still = process.platform === "win32" ? [] : PORTS.filter(isPortInUse);
+const still = process.platform === "win32" ? [] : PORTS.filter((p) => run("fuser", buildFuserArgs(p)).trim() || run("lsof", buildLsofArgs(p)).trim());
 console.log(still.length ? `test stack: ports still in use: ${still.join(", ")}` : `test stack on :${PORTS.join(", :")} stopped`);
 }

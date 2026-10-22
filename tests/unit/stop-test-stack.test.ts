@@ -11,28 +11,16 @@ import { buildFuserArgs, buildKillArgs, buildLsofArgs, buildPowerShellArgs, buil
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 const script = fileURLToPath(new URL("../../scripts/stop-test-stack.mjs", import.meta.url));
 
-describe("stop-test-stack validators (alert #13)", () => {
-  it("validatePid accepts ^[0-9]{1,7}$ > 1 and rejects injection payloads and bad values", () => {
+describe("stop-test-stack validators and argv builders (alerts #4 & #13)", () => {
+  it("validates PID, port, and stack name allowlists", () => {
     for (const p of [2, 1234, 65535, "2", "1234", "9999999"]) expect(validatePid(p)).toBe(Number(p));
-    for (const bad of ["1234; rm -rf /", "$(whoami)", "'id'", "1 && curl evil", "-1", "0", "1", "", "abc", "12345678"]) {
-      expect(() => validatePid(bad)).toThrow();
-    }
-  });
-
-  it("validatePort accepts 1..65535 and rejects non-integers, out of range, and injections", () => {
+    for (const bad of ["1234; rm -rf /", "$(whoami)", "'id'", "1 && curl evil", "-1", "0", "1", "", "abc", "12345678"]) expect(() => validatePid(bad)).toThrow();
     for (const p of [80, 443, 3100, 4010, 65535, "3100"]) expect(validatePort(p)).toBe(Number(p));
     for (const bad of [0, 70000, "80;kill", 3.14, "3.14", -1, "", "http"]) expect(() => validatePort(bad)).toThrow();
-  });
-
-  it("validateStackName accepts ^[A-Za-z0-9_.-]{1,64}$ and rejects shell metacharacters", () => {
     for (const n of ["flowline-test", "stack_1", "test-shard-3", "A1.B2_C3"]) expect(validateStackName(n)).toBe(n);
-    for (const bad of ["stack; rm -rf /", "$(whoami)", "`id`", "stack & echo", "stack | rm", "'stack'", '"stack"', "", "a".repeat(65)]) {
-      expect(() => validateStackName(bad)).toThrow();
-    }
+    for (const bad of ["stack; rm -rf /", "$(whoami)", "`id`", "stack & echo", "stack | rm", "'stack'", '"stack"', "", "a".repeat(65)]) expect(() => validateStackName(bad)).toThrow();
   });
-});
 
-describe("argv builders construct exact arrays (alerts #4 & #13)", () => {
   it("builds exact argv arrays and rejects invalid values before any command execution", () => {
     expect(buildLsofArgs(3100)).toEqual(["-ti", "tcp:3100"]);
     expect(() => buildLsofArgs("3100; rm -rf /")).toThrow();
@@ -54,7 +42,16 @@ describe("argv builders construct exact arrays (alerts #4 & #13)", () => {
     const res = spawnSync(process.execPath, [script], { env: { ...process.env, FLOWLINE_TEST_PID: badPid }, encoding: "utf8" });
     expect(res.status).toBe(1);
     expect(res.stderr).toContain("Invalid PID");
-  });
+  }, 10000);
+
+  it("does not fail or kill when ambient generic PID or STACK_NAME are set", () => {
+    const res = spawnSync(process.execPath, [script, "--port=9999"], {
+      env: { ...process.env, PID: "1234; rm -rf /", STACK_NAME: "ambient stack with spaces" },
+      encoding: "utf8",
+    });
+    expect(res.status).toBe(0);
+    expect(res.stderr).not.toContain("Invalid");
+  }, 10000);
 
   it("scripts contain no shell exec string, no shell: true, and no .replace sanitization", () => {
     for (const f of ["scripts/stop-test-stack.mjs", "scripts/release/verify-beta-stack.mjs"]) {
@@ -67,12 +64,9 @@ describe("argv builders construct exact arrays (alerts #4 & #13)", () => {
   });
 
   it("documents alerts #4 and #13 in triage doc and code", () => {
-    const doc = read("docs/security/codeql-triage-scripts.md");
+    const doc = read("docs/security/codeql-triage-scripts.md"), code = read("scripts/stop-test-stack.mjs");
     expect(doc).toMatch(/\|\s*#4\s*\|\s*`js\/incomplete-sanitization`\s*\|\s*`scripts\/stop-test-stack\.mjs`\s*\|\s*Fixed\s*\|/);
     expect(doc).toMatch(/\|\s*#13\s*\|\s*`js\/shell-command-injection-from-environment`\s*\|\s*`scripts\/stop-test-stack\.mjs`\s*\|\s*Fixed\s*\|/);
-    const code = read("scripts/stop-test-stack.mjs");
-    expect(code).toContain("(alert #4)");
-    expect(code).toContain("(alert #13)");
-    expect(code).toContain("docs/security/codeql-triage-scripts.md");
+    for (const token of ["(alert #4)", "(alert #13)", "docs/security/codeql-triage-scripts.md"]) expect(code).toContain(token);
   });
 });

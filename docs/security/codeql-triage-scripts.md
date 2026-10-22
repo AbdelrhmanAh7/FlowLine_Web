@@ -19,12 +19,13 @@ Scope: the three CodeQL alerts under `scripts/` (#8, #13, #4). All three are fix
 
 `scripts/stop-test-stack.mjs` previously used `execSync` with template string interpolation. The fix:
 1. Strict validators: `validatePid(pid)`, `validatePort(port)`, `validateStackName(name)`.
-2. Discrete argv subprocess calls: `execFileSync("lsof", buildLsofArgs(port))`, `execFileSync("kill", buildKillArgs(pids))`, `execFileSync("fuser", buildFuserArgs(port, { kill: true }))`, and `execFileSync("powershell", buildPowerShellArgs(ports, singlePort))`.
-3. Execution guarded with `import.meta.url === pathToFileURL(process.argv[1]).href`.
+2. Discrete argv subprocess calls via `execFileSync`: `buildLsofArgs`, `buildKillArgs`, `buildFuserArgs`, and `buildPowerShellArgs`.
+3. Execution guarded with `import.meta.url === pathToFileURL(process.argv[1]).href`; helpers are pure functions for testability without side effects.
+4. Input validation for `FLOWLINE_TEST_PID` fails closed on injection payloads without killing arbitrary ambient PIDs. Generic ambient `PID` and `STACK_NAME` are ignored.
 
 ## Verification
 
 ```sh
-pnpm vitest run --project unit tests/unit/verify-beta-stack.test.ts tests/unit/stop-test-stack.test.ts
-node -e 'import("./scripts/ci/docs-check.mjs").then(m => { const r = m.checkDocs(["scripts/release/verify-beta-stack.mjs", "scripts/stop-test-stack.mjs", "tests/unit/verify-beta-stack.test.ts", "tests/unit/stop-test-stack.test.ts", "docs/security/codeql-triage-scripts.md"]); console.log(r.summary); process.exit(r.passed ? 0 : 1); })'
+pnpm test tests/unit/verify-beta-stack.test.ts tests/unit/stop-test-stack.test.ts
+node -e 'import("./scripts/ci/docs-check.mjs").then(m => m.checkDocs(["scripts/release/verify-beta-stack.mjs", "scripts/stop-test-stack.mjs", "tests/unit/verify-beta-stack.test.ts", "tests/unit/stop-test-stack.test.ts", "docs/security/codeql-triage-scripts.md"]))'
 ```

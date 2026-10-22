@@ -11,6 +11,7 @@ import net from "node:net";
 import tls from "node:tls";
 import { pathToFileURL } from "node:url";
 
+// Pure helper functions exported for unit testing; script execution is guarded by import.meta.url check.
 export function isLoopbackTarget(u) {
   try {
     const raw = String(u ?? "").trim();
