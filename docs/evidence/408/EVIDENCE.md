@@ -1,6 +1,6 @@
 # Evidence — Issue #408: fix: qa finding: Acceptance-criterion deviation from #108 (split from #321)
 
-Tested commit: `76245e0b21e9744308d91b842a338f7ce1b3b553`
+Tested commit: `d7d5922c23e4253be2693340c4dc037390925c5d`
 Branch `ai/408`. Split from PR #321 (parent issue #315, originating from #108 / PR #214).
 Originating report: QA review on PR #321 (`https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/321#issuecomment-6278206709`).
 Originating Sentry issue: None (internal QA finding split from PR #321; parent issue #315 / #108).

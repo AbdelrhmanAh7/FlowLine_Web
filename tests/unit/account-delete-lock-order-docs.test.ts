@@ -43,8 +43,13 @@ describe("@issue-408 docs, header consistency, and lock-order proof: account del
     expect(section).toMatch(/83c7bb8e[\s\S]*?already contained the user-first locking/i);
 
     // Explains git history and technical reality without asserting unbacked CTO authorization
+    expect(section).not.toMatch(/\bCTO\b/i);
     expect(section).not.toMatch(/As confirmed by the CTO/i);
     expect(section).not.toMatch(/Per CTO instructions/i);
+
+    // Resolves email-token-lock-order local verification ambiguity (unit executed vs integration unexecuted)
+    expect(section).toContain("tests/unit/email-token-lock-order.test.ts");
+    expect(section).toContain("tests/integration/email-token-lock-order.test.ts` remains marked unexecuted");
 
     // Reconciliation note asserts status agreement rather than "exact wording"
     expect(section).toMatch(/agrees on the status/i);
@@ -96,7 +101,8 @@ describe("@issue-408 docs, header consistency, and lock-order proof: account del
 
     // Does not hardcode stale point-in-time results or unbacked CTO directive in test header
     expect(testFile).not.toMatch(/\(2\/2 pass\)/);
-    expect(testFile).not.toMatch(/head b9ae3ee/);
+    expect(testFile).not.toMatch(/head [0-9a-f]{7,40}/i);
+    expect(testFile).not.toMatch(/\bCTO\b/i);
     expect(testFile).not.toMatch(/Per CTO directive/i);
     expect(testFile).not.toMatch(/As confirmed by the CTO/i);
   });
