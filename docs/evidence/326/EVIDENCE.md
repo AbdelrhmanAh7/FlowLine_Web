@@ -2,6 +2,7 @@
 
 Branch `ai/326`, PR #328. Supersedes part of PR #244 (parent issue #149, Template: 'Deal won → Mizano quote' with an approval step).
 Originating Sentry issue: None (CI gate failure on PR #244).
+Tested Commit SHA: `a56681dedc18c2d8e104ec7c2ee3521b4f2ecb59`
 
 ## Summary
 Implements the 'Deal won → Mizano quote' template in `src/engine/design-templates.ts` with an approval gate on `mizano.create_customer`, localization in English and Arabic (`src/i18n/messages/{en,ar}.json`), and template availability validation in `src/server/flows.ts`. Fixes root causes of the `gate` failure on commit `7634b2c` of PR #244 without breaking button accessible names or multi-tenant workspace isolation.
@@ -12,6 +13,10 @@ Commit `7634b2c` on PR #244 caused the CI `gate` check to fail:
 2. Card titles were wrapped in empty `<button onClick={() => {}}>`, triggering accessibility findings and duplicate interactive button elements.
 3. `src/server/access.ts` attempted an insecure test-mode fallback for workspaces starting with `"verify-workspace"` or `"[slug]"`, violating multi-tenant isolation rules.
 4. Arabic string used `←` instead of standard `→`.
+
+## Regression Verification (Base 7634b2c vs Head a56681d)
+- **Base (7634b2c on PR #244):** CI gate failed. Playwright spec `e2e/phase2.spec.ts:97` timed out on `getByRole("button", { name: "Use template" })`. `src/server/access.ts` contained tenancy bypasses.
+- **Head (a56681d on PR #328):** Button accessible names strictly preserved as `"Use template"`. `src/server/access.ts` remains pristine with zero tenancy bypasses. All unit, integration, and e2e-army tests pass locally and in gate.
 
 ## Explicit Acceptance Criteria
 
@@ -29,10 +34,10 @@ Commit `7634b2c` on PR #244 caused the CI `gate` check to fail:
 | AC1 | Message catalogue parity (EN & AR) | `nice -n 10 pnpm exec vitest run tests/unit/i18n.test.ts --maxWorkers=2` | 0 | 16/16 passed (0 failed) |
 | AC1 | Bilingual template step names & labels | `nice -n 10 pnpm exec vitest run tests/unit/i18n-content-text.test.ts --maxWorkers=2` | 0 | 43/43 passed (0 failed) |
 | AC2 | Approval pause (waiting_approval) & rejection (zero calls) | `nice -n 10 pnpm exec vitest run tests/unit/deal-won-mizano-template.test.ts --maxWorkers=2` | 0 | 8/8 passed (pending, rejected, not won verified) |
-| AC2, AC3 | Worker approval path & draft quote creation | `nice -n 10 node scripts/with-env.mjs .env.test pnpm vitest run --project integration tests/integration/deal-won-mizano-approval.test.ts --maxWorkers=2` | 0 | 4/4 passed (pause, approve -> quote, reject -> fail) |
+| AC2, AC3 | Worker approval path & draft quote creation | `DATABASE_URL=postgres://localhost:5432/flowline_test FLOWLINE_ENV=test pnpm vitest run --project integration tests/integration/deal-won-mizano-approval.test.ts` | 0 | 4/4 passed (pause, approve -> quote, reject -> fail) |
 | AC3 | Use template creates canvas flow with approval step | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` (@issue-326 AC3) | 0 | Flow created with "Mizano — Create customer (needs approval)" node |
 | AC4 | Template availability guard (409 TEMPLATE_UNAVAILABLE) | `tests/integration/deal-won-mizano-approval.test.ts` (availability test) | 0 | Refused with 409 TEMPLATE_UNAVAILABLE when actions missing |
-| AC5 | Multi-tenant isolation & clean templates page | `pnpm typecheck && pnpm lint` | 0 | Both clean, 0 errors, no access bypasses |
+| AC5 | Multi-tenant isolation & clean templates page | `pnpm typecheck && pnpm lint && pnpm check:evidence` | 0 | All clean, 0 errors, no access bypasses |
 
 ## Changed Covering Tests
 - `e2e-army/147-mizano-create-customer-and-quote.e2e.ts`: Added natural-language e2e-army tests tagged `@issue-326` covering EN listing, Arabic RTL listing, and canvas flow creation.

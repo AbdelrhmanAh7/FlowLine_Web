@@ -4,6 +4,7 @@
 **Parent:** PR #244 (Issue #149: Template: 'Deal won → Mizano quote' with an approval step)  
 **Branch:** `ai/326`  
 **Date:** 2026-10-22  
+**Tested Commit SHA:** `a56681dedc18c2d8e104ec7c2ee3521b4f2ecb59`  
 
 ## Root Cause Analysis for Red Check `gate` on 7634b2c
 
