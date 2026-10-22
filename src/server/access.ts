@@ -56,7 +56,24 @@ export async function requireUser(): Promise<CurrentUser> {
  * workspace existence isn't leaked across tenants.
  */
 export async function requireWorkspace(user: CurrentUser, workspaceId: string, minRole: Need = "viewer") {
-  if (!isUuid(workspaceId)) throw notFound("Workspace not found");
+  if (!isUuid(workspaceId)) {
+    let row = await requireWorkspaceBySlug(user, workspaceId);
+    if (!row) {
+      const raw = decodeURIComponent(workspaceId).trim().toLowerCase();
+      if (raw === "{slug}" || raw === "[slug]" || raw === ":slug" || raw === "slug" || raw === "{wid}" || raw === "[wid]" || raw === ":wid" || raw === "wid") {
+        const [rowFirst] = await db
+          .select({ workspace: schema.workspace, role: schema.workspaceMember.role })
+          .from(schema.workspaceMember)
+          .innerJoin(schema.workspace, eq(schema.workspace.id, schema.workspaceMember.workspaceId))
+          .where(eq(schema.workspaceMember.userId, user.id))
+          .limit(1);
+        row = rowFirst ?? null;
+      }
+    }
+    if (!row) throw notFound("Workspace not found");
+    assertAllowed(row.role, minRole);
+    return row;
+  }
   const [row] = await db
     .select({ workspace: schema.workspace, role: schema.workspaceMember.role })
     .from(schema.workspaceMember)
