@@ -1,5 +1,7 @@
 # Evidence — Issue #375: fix flow list invariance verification in 117-flows-list-dashboard.e2e.ts (split from #362)
 
+**Model:** Gemini 3.8 Flash · **Effort:** High · **Why:** Fix CodeRabbit review threads on PR #380 (issue #375), prove flow list invariance contract, harden workspace slug validation, safely decode URIs, and record verification evidence.
+
 ## Overview & Scope
 - **Issue**: #375 (`fix: 117-flows-list-dashboard.e2e.ts: blocker (Claude Sonnet 5.5·medium): Not fixed from CodeRabbit (AC2): … (split from #362)`)
 - **PR**: PR #380 (Round 1 Review Resolution)
@@ -8,7 +10,7 @@
 - **Parent Issues**: #295, #164
 - **Supersedes**: part of PR #362
 - **Branch**: `ai/375` (clean branch off `origin/main`)
-- **Tested Commit SHA**: HEAD
+- **Tested Commit SHA**: 4a9ec1ca3a8ceee485709b06cf8a67422efe824f
 - **User-Facing UI Changed**: No (backend validation, URL parsing, E2E request-level test assertions, unit test guards). Playwright screenshots and RTL/LTR Arabic visual captures are exempt for backend/test-only changes; Arabic strings and RTL layout are verified in `e2e/arabic.spec.ts`.
 
 ## Review Threads & Finding Resolutions
