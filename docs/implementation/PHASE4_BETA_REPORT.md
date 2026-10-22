@@ -354,6 +354,13 @@ Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and 
 tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
 Regression tested against base failure. Supersedes part of #170.
 
+## Pilot metrics: duplicate runs, scheduled runs and uptime (issue #320) — 2026-10-20
+
+Resolved review findings from PR #170 (split finding f7eba2a4e9dd):
+1. **Duplicate webhook runs**: Production never creates rejected `webhook_event` rows (retries return 200/409 directly), so querying `status = 'rejected'` reported 0 and missed duplicate runs. `getDuplicateWebhookRuns` now counts duplicate `run` rows grouped by `(flow_id, trigger_ref)` where `trigger_kind = 'webhook'` and `trigger_ref IS NOT NULL`.
+2. **Scheduled runs**: Added `getScheduledRuns` querying runs where `trigger_kind = 'schedule'`, included in `PilotMetrics` and formatted in Markdown report.
+3. **Staging uptime**: Added `NOT_TRACKED_UPTIME` documenting external `/api/health` monitoring, and included staging uptime row in `formatMetricsAsMarkdown`.
+Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (18/18 passing) and integration tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing). Supersedes part of #170. Refs #143.
 ## i18n: Deal won → Mizano quote gallery strings (issue #242) — 2026-10-20
 
 Added `localTemplates.deal-won-mizano-quote` EN and AR entries to message catalogs (`src/i18n/messages/en.json` and `src/i18n/messages/ar.json`).
