@@ -2336,7 +2336,14 @@
       "twoFactor": {
         "title": "Two-step verification",
         "on": "On",
-        "off": "Off"
+        "off": "Off",
+        "enable": "Enable",
+        "cancel": "Cancel",
+        "password": "Account password",
+        "passwordInvalid": "That password isn't correct.",
+        "secret": "Secret key (add it to your authenticator app)",
+        "backupCodes": "Backup codes — shown only once, store them offline.",
+        "confirm": "Confirm and turn on"
       }
     },
     "settings": {
