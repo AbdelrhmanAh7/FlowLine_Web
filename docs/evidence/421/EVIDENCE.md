@@ -1,8 +1,8 @@
-# Verification Evidence: Issue #421 (PR #440)
+# Verification Evidence: Issue #421 (PR #445, stacked on PR #440)
 
-**Model:** Gemini 3.8 Flash · **Effort:** Medium · **Why:** Add template registration, localization dictionaries, fix Playwright getByRole format, ensure em-dash on Arabic node labels, and verify with comprehensive unit tests and typecheck.
+**Model:** Gemini 3.8 Flash · **Effort:** High · **Why:** Restack ai/421-p2 onto origin/ai/421, resolve merge conflicts across evidence and implementation ledgers, fix QA round 2 review finding on Arabic template node label em-dash vs regular hyphen, and verify with comprehensive unit tests and typecheck.
 
-- Branch: `ai/421` (PR #440 superseding part of #410, parent #409)
+- Branch: `ai/421-p2` (stacked on `ai/421`, PR #445 superseding part of #410)
 - Originating Sentry issue: None / N/A (E2E gate finding and QA review rounds 1 & 2 from split PR #410, parent #409: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/410#issuecomment-6342555610)
 - Supersedes part of #410.
 
@@ -40,7 +40,7 @@ However:
 - **AC3:** In `src/i18n/messages/ar.json`, the node label for `customer` uses an em-dash (`—`, U+2014) rather than a regular hyphen (`-`, U+002D), matching `"Mizano — إنشاء عميل (يحتاج موافقة)"`, with `quote` and `notify` labels also adhering to this standard (no ASCII hyphen).
 - **AC4:** Clicking "Use template" creates a new flow redirecting to `/w/[slug]/flows/[flowId]`, with flow name `"Deal won → Mizano quote"`, and canvas node labeled `"Mizano — Create customer (needs approval)"` with approval required (`requireApproval: true`).
 - **AC5:** All integration actions (`mizano.create_customer`, `mizano.create_draft_quote`, `slack.post_message`) resolve cleanly against the provider registry via `missingTemplateActions(graph, registry) === []`.
-- **AC6:** Unit and integration tests verify the template definition and i18n keys; regression test demonstrates failure on base where the template and `designTemplates` translations are missing, and passes on head.
+- **AC6:** Unit and integration tests verify the template definition and i18n keys; regression test fails on base (`origin/main`) where the template and `designTemplates` translations are missing, and passes on head.
 
 ---
 
@@ -49,8 +49,8 @@ However:
 | AC | Requirement | Command / Test | Exit Code | Observed Result |
 |---|---|---|---|---|
 | **AC1** | E2E gallery card & accessible button | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC1` | 0 | `getByTestId("template-deal-won-mizano-quote")` and `getByRole("button", { name: "Use template" })` verified |
-| **AC2** | Arabic localization and RTL consistency | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC2` + `tests/unit/i18n.test.ts` | 0 | `dir="rtl"` asserted; title `"صفقة مكسوبة → عرض سعر Mizano"` without `←` |
-| **AC3** | Arabic em-dash vs hyphen in node labels | `pnpm vitest run tests/unit/i18n.test.ts` | 0 | 19/19 passed; verifies `customer`, `quote`, `notify` contain `—` and not `-` |
+| **AC2** | Arabic localization and RTL consistency | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC2` + `tests/unit/i18n.test.ts` | 0 | `dir="rtl"` asserted; title `"صفقة مكسوبة → عرض سعر Mizano"` without `←`; 19 unit tests passed |
+| **AC3** | Em-dash (`—`) consistency in Arabic node labels | `pnpm vitest run tests/unit/i18n.test.ts` | 0 | Asserted `toContain("—")` and `not.toContain("-")` on customer, quote, notify node labels |
 | **AC4** | Flow creation with approval step | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC3` | 0 | Flow created with name `"Deal won → Mizano quote"` and node `"Mizano — Create customer (needs approval)"` |
 | **AC5** | Action dependencies and registry resolution | `pnpm vitest run tests/unit/template-actions.test.ts` | 0 | 7/7 tests passed; `missingTemplateActions` returns `[]`; approval step verified |
 | **AC1, AC4, AC5** | Graph wiring, availability filtering, and approval gate execution | `pnpm vitest run tests/unit/deal-won-mizano-template.test.ts` | 0 | 8/8 tests passed in 9ms |
