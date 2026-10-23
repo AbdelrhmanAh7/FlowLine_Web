@@ -1,7 +1,8 @@
-// Issues #200, #179 and #323 (supersedes #181): the error/rejection boundary of route() and of /api/platform/copy and /admin/copy. No model: request-level, and AC6 also checks the rendered 404 page in the browser.
+// Issues #200, #179, #322 (supersedes #186, restart of #180) and #323 (supersedes #181): the error/rejection boundary of route() and of /api/platform/copy and /admin/copy. No model: request-level, and AC6 also checks the rendered 404 page in the browser.
 //
 // #200 AC: route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer.
 // #179 AC1: GET /api/platform/copy (getCopyEditorState) never leaks state or an internal error to a non-admin caller.
+// #322 AC6 (fresh restart of #180, client error display): /admin/copy and /api/platform/copy enforce the platform admin boundary with clean 404 and bounded JSON.
 // #323 AC1/AC6 (part 3/3 of #119, fresh restart of #181): every refusal of /api/platform/copy reaches the client as a bounded JSON error, and
 // /admin/copy shows a non-admin the localized 404 page. The throwaway stack has no platform admin (one needs an enrolled
 // authenticator, a session MFA proof and an admin row, which no endpoint creates), so this covers what the stack can observe;
@@ -163,6 +164,42 @@ test(
       await expect(screen.getByRole("heading", p.editor)).toHaveCount(0);
       expect(await browser.url()).toMatch(/\/admin\/copy$/);
     }
+  },
+);
+
+test(
+  "@issue-322 AC6: /admin/copy refuses non-admins with 404 in Arabic RTL and English without leaking server internals",
+  { tags: ["feat:fl-platform-admin", "feat:fl-i18n-rtl", "lvl:api"] },
+  async ({ app }) => {
+    const base = app.baseUrl!;
+    const session = await signedIn(base, emailFor(base, "user-322"));
+    const userHeaders = (locale: string) => ({
+      origin: new URL(base).origin,
+      cookie: `fl_test_beta_mode=open; fl_locale=${locale}; ${session}`,
+    });
+
+    // Page access for non-admin returns 404
+    const arRes = await fetch(`${base}/admin/copy`, { headers: userHeaders("ar") });
+    expect(arRes.status).toBe(404);
+    const arText = await arRes.text();
+    expect(arText).toContain("لم نعثر على هذه الصفحة");
+    expect(arText).not.toContain("platformAdmin.copyEditor");
+    expect(arText).not.toContain("<pre>");
+
+    const enRes = await fetch(`${base}/admin/copy`, { headers: userHeaders("en") });
+    expect(enRes.status).toBe(404);
+    const enText = await enRes.text();
+    expect(enText).toContain("find that page");
+    expect(enText).not.toContain("platformAdmin.copyEditor");
+    expect(enText).not.toContain("<pre>");
+
+    // Unauthorized API mutation returns bounded 404 JSON with NOT_FOUND code
+    const patchRes = await fetch(`${base}/api/platform/copy`, {
+      method: "PATCH",
+      headers: { ...userHeaders("en"), "content-type": "application/json" },
+      body: JSON.stringify({ action: "edit", edits: [], expectedRevision: 0 }),
+    });
+    await expectBoundedError(patchRes, 404, "NOT_FOUND");
   },
 );
 
