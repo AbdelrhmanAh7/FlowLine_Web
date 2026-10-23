@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, schema, type Db } from "@/db";
 import { assertRouteSelection } from "@/ai/hub/selection";
 import { NODE_TYPES, type FlowGraph } from "@/engine/types";
-import { DESIGN_TEMPLATES } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, missingTemplateActions } from "@/engine/design-templates";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
 import type { Locale } from "@/i18n/config";
 import { localizeTemplate } from "@/i18n/template-text";
@@ -13,6 +13,7 @@ import { MAX_EDGES, MAX_NODES, validateGraph } from "@/engine/validate";
 import type { CurrentUser } from "./access";
 import { consumeFault } from "./faults";
 import { HttpError, notFound } from "./http";
+import { getAction } from "@/integrations/registry";
 
 const position = z.object({ x: z.number().finite(), y: z.number().finite() });
 const nodeSchema = z.object({
@@ -75,6 +76,12 @@ export async function listFlows(workspaceId: string) {
 export async function createFlow(user: CurrentUser, workspaceId: string, input: { name?: string; templateId?: string }, locale?: Locale) {
   const template = input.templateId ? [...LOCAL_TEMPLATES, ...DESIGN_TEMPLATES].find((t) => t.id === input.templateId) : undefined;
   if (input.templateId && !template) throw new HttpError(400, "UNKNOWN_TEMPLATE", "That template isn't available");
+  if (template) {
+    const missing = missingTemplateActions(template.graph, { has: (id: string) => getAction(id) !== undefined });
+    if (missing.length > 0) {
+      throw new HttpError(409, "TEMPLATE_UNAVAILABLE", `That template needs app actions that aren't available yet: ${missing.join(", ")}`);
+    }
+  }
   const localized = template ? (locale ? localizeTemplate(createTranslator(locale), template) : { name: template.name, graph: structuredClone(template.graph) }) : null;
   const name = flowNameSchema.parse(input.name ?? localized?.name ?? "Untitled flow");
   const graph: FlowGraph = localized?.graph ?? structuredClone(BLANK_GRAPH);
