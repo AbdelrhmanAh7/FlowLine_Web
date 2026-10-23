@@ -34,6 +34,14 @@ Implements comprehensive client-side error display, resilience, and user-friendl
     AssertionError: expected TypeError: terminated to be an instance of ApiError
     ```
   - *Pass on head*: Moving `text = await res.text();` inside `try/catch` in `src/lib/api.ts` ensures truncated streams are caught and converted to `ApiError(0, "NETWORK", "Can't reach Flowline — check your connection")`. All 4 tests in `tests/unit/api-body-read.test.ts` pass cleanly (exit 0).
+- **CLI Job File Isolation Canonicalization & Symlink Guard (`src/company-builder/cli/adapter.ts`)**:
+  - *Base behavior*: On macOS and environments where temp directory paths traverse symlinks (e.g. `/var` -> `/private/var`), `p.startsWith(realpathSync(jobDir) + sep)` threw `ISOLATION_UNVERIFIED` for legitimate files because `p` was resolved relative to un-canonicalized `jobDir`. Additionally, broken symlinks caused `existsSync` to return `false` before `lstatSync` could verify symlink status, yielding `OUTPUT_INVALID` instead of fail-closed `ISOLATION_UNVERIFIED`.
+  - *Failure on base (`tests/integration/company-builder-cli.test.ts`)*:
+    ```
+    FAIL |nightly| tests/integration/company-builder-cli.test.ts > controller + adapter with fake CLIs > readJobFile refuses symlinks and paths outside the job directory
+    Error: ISOLATION_UNVERIFIED
+    ```
+  - *Pass on head*: Canonicalizing `jobDir` with `realpathSync` and checking `lstatSync` before file read ensures strict containment and fail-closed symlink rejection. All 22 tests in `tests/integration/company-builder-cli.test.ts` pass cleanly (exit 0).
 
 ## UI / Playwright / Arabic RTL & LTR Verification
 - **Platform Admin Boundary**: `/admin/copy` enforces the platform-admin gate (`if (!(await platformAdminOrNull())) notFound();` in `src/app/admin/copy/page.tsx:15`). Automated verifiers running without a platform-admin session receive a 404 page rather than the admin panel.
@@ -75,7 +83,14 @@ eslint . --cache --cache-location node_modules/.cache/eslint/
 Exit code: 0
 ```
 
-### 3. e2e-army 8-File Cap
+### 3. Integration Tests (Isolation & Symlink Security)
+```
+$ pnpm vitest run tests/integration/company-builder-cli.test.ts
+✓ |nightly| tests/integration/company-builder-cli.test.ts (22 tests)
+Exit code: 0
+```
+
+### 4. e2e-army 8-File Cap
 ```
 $ node -e "const fs = require('fs'); const files = fs.readdirSync('e2e-army').filter(f => /^[\w.-]+\.e2e\.ts$/.test(f)); console.log(files.length, files);"
 8 [
