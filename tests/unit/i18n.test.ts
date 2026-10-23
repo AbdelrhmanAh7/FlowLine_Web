@@ -180,3 +180,22 @@ describe("API error messages", () => {
     expect(apiErrorMessage(t, "weird")).toBe(ar.errors.generic);
   });
 });
+
+describe("local template localization consistency (#340)", () => {
+  it("deal-won-mizano-quote title uses right-pointing arrow (→) for RTL layout consistency", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string }> }).localTemplates;
+    const name = templates?.["deal-won-mizano-quote"]?.name;
+    expect(name).toBe("صفقة مكسوبة → عرض سعر Mizano");
+    expect(name).not.toContain("←");
+  });
+
+  it("no local template titles contain misplaced left-pointing arrows (←)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string }> }).localTemplates ?? {};
+    for (const [id, tpl] of Object.entries(templates)) {
+      if (tpl.name) {
+        expect(tpl.name, `template ${id} contains leftwards arrow ←`).not.toContain("←");
+      }
+    }
+  });
+});
+
