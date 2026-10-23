@@ -104,4 +104,22 @@ describe("templateActionIds and missingTemplateActions (AC4)", () => {
       expect(missingTemplateActions(tpl.graph, registry), `template ${tpl.id} has missing actions`).toEqual([]);
     }
   });
+
+  it("deal-won-mizano-quote design template is registered with customer approval and draft quote steps (#421)", () => {
+    const tpl = DESIGN_TEMPLATES.find((t) => t.id === "deal-won-mizano-quote");
+    expect(tpl).toBeDefined();
+    expect(tpl?.name).toBe("Deal won → Mizano quote");
+    expect(tpl?.category).toBe("Sales");
+    expect(tpl?.goal).toBe("sales");
+    expect(templateActionIds(tpl!.graph)).toEqual([
+      "mizano.create_customer",
+      "mizano.create_draft_quote",
+      "slack.post_message",
+    ]);
+    const customerNode = tpl!.graph.nodes.find((n) => n.id === "customer");
+    expect(customerNode).toBeDefined();
+    expect(customerNode?.data.label).toBe("Mizano — Create customer (needs approval)");
+    expect((customerNode?.data.config as { requireApproval?: boolean })?.requireApproval).toBe(true);
+  });
 });
+
