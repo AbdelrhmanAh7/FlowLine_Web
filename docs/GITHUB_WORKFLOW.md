@@ -30,6 +30,10 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 5. Stacked PRs merge top-down after their base.
 6. Draft PRs are never merged, folded into another PR or carried by fast-forwarding their base branch (that makes GitHub mark the draft "merged" without its own review; this happened once with #34, see its exception record). Mark the draft ready so CodeRabbit reviews it, then merge it explicitly, or close it with a recorded reason.
 
+## Security scanning and second reviewer
+
+Secret scanning with push protection, Dependabot alerts and CodeQL default setup are on (Dependabot update PRs are off to save the CodeRabbit budget). Automatic Copilot code review was not on at the last check; enabling it is an owner action tracked in #160. State, owner steps and how to handle a push-protection block or an alert: [REPO_SECURITY_SETTINGS.md](security/REPO_SECURITY_SETTINGS.md). Once Copilot reviews, its threads must be answered and resolved before merge like any other conversation. Every PR confirms its own posture with the PR template's *Security posture* line (rule in `AGENTS.md`): no push-protection bypass for a real credential, and any alert or review item raised on the PR handled as that doc says.
+
 ## Exception records
 
 The constitution in `AGENTS.md` allows an exception only with a written reason recorded before or at the moment of the action, in the commit message **and** on the PR or issue. Use this shape:

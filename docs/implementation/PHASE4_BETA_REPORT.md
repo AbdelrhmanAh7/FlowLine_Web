@@ -1,6 +1,11 @@
 # Flowline Phase 4: launch candidate & private beta report
 
 
+## Security posture PR requirement and settings documentation (issue #107, safe part of #24) — 2026-10-21
+
+PR #210 implements the safe documentation part of parent issue #24 (repository secrets and account settings remain owner-only under #160). Documented the `Security posture` PR requirement in `AGENTS.md` and `.github/pull_request_template.md`, requiring contributors and agents to verify no push-protection bypass for real credentials and to handle secret scanning, Dependabot, CodeQL, and Copilot review items as specified in [`docs/security/REPO_SECURITY_SETTINGS.md`](../security/REPO_SECURITY_SETTINGS.md). Updated `docs/GITHUB_WORKFLOW.md` to keep merge rules 1–6 contiguous. Updated `docs/security/REPO_SECURITY_SETTINGS.md` copy-pasteable shell commands to use `${PR_NUMBER:-123}` without unescaped angle brackets, corrected the enabled-settings summary, and clarified Copilot review verification for ready PRs. Verified by unit tests in `tests/unit/docs-index.test.ts` (7/7 passed); `pnpm typecheck` and `pnpm lint` exit 0. No user-facing UI or runtime flow changes (`E2E: not needed — docs and guidelines only`). Evidence in [`docs/evidence/107/EVIDENCE.md`](../evidence/107/EVIDENCE.md).
+
+
 ## Pilot E2E failure corrections — 2026-10-15
 
 Local branch `fix/pilot-e2e-failures`; owner requested local changes/commit only, no push/PR or hub edits.
