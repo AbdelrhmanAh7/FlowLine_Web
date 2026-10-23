@@ -207,8 +207,14 @@ describe("design template localization consistency (#421)", () => {
     expect(tpl?.name).toBe("صفقة مكسوبة → عرض سعر Mizano");
     expect(tpl?.name).not.toContain("←");
     expect(tpl?.nodes?.["customer"]).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
+    expect(tpl?.nodes?.["customer"]).toContain("—");
+    expect(tpl?.nodes?.["customer"]).not.toContain("-");
     expect(tpl?.nodes?.["quote"]).toBe("Mizano — إنشاء مسودة عرض سعر");
+    expect(tpl?.nodes?.["quote"]).toContain("—");
+    expect(tpl?.nodes?.["quote"]).not.toContain("-");
     expect(tpl?.nodes?.["notify"]).toBe("Slack — عرض السعر جاهز");
+    expect(tpl?.nodes?.["notify"]).toContain("—");
+    expect(tpl?.nodes?.["notify"]).not.toContain("-");
   });
 });
 

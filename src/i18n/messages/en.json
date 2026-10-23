@@ -2291,12 +2291,12 @@
       },
       "requires": {
         "mizano": "Create the customer and the draft quote",
-        "slack": "Notify the team when the quote is ready"
+        "slack": "Tell your team the quote is ready"
       },
       "setup": {
-        "s1": "Choose Mizano and Slack connections",
-        "s2": "Set the Slack channel ID",
-        "s3": "Publish, then point your CRM's deal-won webhook at the flow's URL"
+        "s1": "Choose the Mizano and Slack connections",
+        "s2": "Set your sales channel ID",
+        "s3": "Each run waits for approval before anything is created in Mizano"
       }
     }
   },
