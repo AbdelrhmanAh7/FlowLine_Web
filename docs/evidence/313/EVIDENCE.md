@@ -2,7 +2,7 @@
 
 Closes #252. Supersedes #263.
 Branch: `ai/313` (PR #418)
-Tested Commit SHA: `e01ae071`
+Tested Commit SHA: `1275d68a`
 Originating Sentry issue: None (release gate e2e failure `fl-integrations` on `main`, not a Sentry exception)
 Originating Gate / Log: `fl-integrations` failure on `main` @ `9c754b2`
 
