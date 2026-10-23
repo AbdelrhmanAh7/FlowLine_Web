@@ -1,6 +1,11 @@
 # Flowline Phase 4: launch candidate & private beta report
 
 
+## Type-check e2e-army/ folder (issue #217, part of #85) — 2026-10-20
+
+Removed `e2e-army` from `tsconfig.json`'s `exclude` list so `pnpm typecheck` (`tsc --noEmit`) covers `e2e-army/**/*.ts` now that `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies. All `e2e-army` files typecheck cleanly with 0 errors. Updated `docs/DEVELOPER_GUIDE.md` to note that `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies and `e2e-army/` is type-checked. Added unit test `tests/unit/tsconfig-e2e-army-include.test.ts`.
+
+
 ## Pilot E2E failure corrections — 2026-10-15
 
 Local branch `fix/pilot-e2e-failures`; owner requested local changes/commit only, no push/PR or hub edits.

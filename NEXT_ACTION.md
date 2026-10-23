@@ -1,4 +1,13 @@
-# Next action — 2026-10-03
+# Next action — 2026-10-20
+
+## Issue #217 — Type-check e2e-army/ (2026-10-20)
+
+Removed `e2e-army` from `tsconfig.json` `exclude` array. All files under `e2e-army/` typecheck cleanly with 0 errors.
+Updated `docs/DEVELOPER_GUIDE.md` to state `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies and `e2e-army/` is typechecked.
+Added unit test `tests/unit/tsconfig-e2e-army-include.test.ts` (3/3 pass).
+Verified `pnpm typecheck`, `pnpm lint e2e-army tsconfig.json`, and `pnpm test tests/unit/tsconfig-e2e-army-include.test.ts tests/unit/docs-check-script.test.ts`.
+E2E: not needed — internal developer tooling, tsconfig, docs and unit test only.
+Harness next: push branch `ai/217` and obtain CI and review confirmation.
 
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
