@@ -227,6 +227,7 @@ function UserMenu({ user, support, compact }: { user: { name: string; email: str
         </MenuItem>
         <MenuSeparator />
         <MenuLabel>{t("shell.userMenu.account")}</MenuLabel>
+        <MenuLink href="/account/security">{t("shell.userMenu.security")}</MenuLink>
         <MenuLink href="/resend-verification">{t("shell.userMenu.resendVerification")}</MenuLink>
         <MenuLink href="/account/delete" danger>
           {t("shell.userMenu.deleteAccount")}

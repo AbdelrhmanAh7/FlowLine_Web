@@ -87,3 +87,14 @@ test(
     expect(actions.filter((a) => a === "account.deleted")).toHaveLength(1);
   },
 );
+
+test(
+  "@issue-196 AC3: a signed-out visit to the security page redirects to sign-in",
+  { tags: ["feat:fl-email-flows", "lvl:api"] },
+  async ({ app }) => {
+    const res = await fetch(new URL("/account/security", app.baseUrl), { redirect: "manual" });
+    expect(res.status).toBeGreaterThanOrEqual(300);
+    expect(res.status).toBeLessThan(400);
+    expect(new URL(res.headers.get("location") ?? "", app.baseUrl).pathname).toBe("/sign-in");
+  },
+);
