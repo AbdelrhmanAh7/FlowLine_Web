@@ -15,7 +15,7 @@ export const GET = route(async (_req, { params }: Ctx) => {
 export const POST = route(async (req, { params }: Ctx) => {
   const user = await requireUser();
   const { workspace } = await requireWorkspace(user, (await params).wid, "flow.edit");
-  const input = await parseBody(req, z.object({ name: z.string().optional(), templateId: z.string().optional() }));
+  const input = await parseBody(req, z.object({ name: z.string().optional(), templateId: z.string().optional(), n8n: z.unknown().optional() }));
   // A template's name and step labels are created in the creator's UI language (the request's `fl_locale` cookie).
   return json({ flow: await createFlow(user, workspace.id, input, requestLocale(req)) }, { status: 201 });
 });

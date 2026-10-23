@@ -8,7 +8,7 @@ import { CopilotPanel } from "@/components/builder/copilot-panel";
 import { PageHeader } from "@/components/page-header";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { useToast } from "@/components/toast";
-import { Button, ButtonLink, Card, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, useKeepMounted, type Tone } from "@/components/ui";
+import { Button, ButtonLink, Card, Dialog, Dot, EmptyState, ErrorState, Input, RUN_TONE, Skeleton, StatusBadge, Textarea, useKeepMounted, type Tone } from "@/components/ui";
 import { useT } from "@/i18n/client";
 import { stepErrorText } from "@/i18n/engine-text";
 import { apiErrorMessage } from "@/i18n/errors";
@@ -86,10 +86,86 @@ export function useCreateFlow() {
   const toast = useToast();
   const t = useT();
   return useMutation({
-    mutationFn: (body: { name?: string; templateId?: string }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
+    mutationFn: (body: { name?: string; templateId?: string; n8n?: unknown }) => api<{ flow: { id: string } }>(`/api/workspaces/${workspace.id}/flows`, { method: "POST", json: body }),
     onSuccess: ({ flow }) => router.push(`/w/${workspace.slug}/flows/${flow.id}`),
     onError: (e) => toast(apiErrorMessage(t, e, t("flows.createError")), "danger"),
   });
+}
+
+function ImportN8nDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useT();
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const create = useCreateFlow();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const submit = () => {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      setError(t("flows.importN8nInvalid"));
+      return;
+    }
+    setError(null);
+    create.mutate({ n8n: parsed });
+  };
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const content = await file.text();
+      // Validate it's valid JSON
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        setError(t("flows.importN8nInvalid"));
+        return;
+      }
+      // Validate it's an n8n workflow (has nodes array)
+      if (!parsed || typeof parsed !== "object" || !("nodes" in parsed) || !Array.isArray((parsed as Record<string, unknown>).nodes)) {
+        setError(t("flows.importN8nNotWorkflow"));
+        return;
+      }
+      setError(null);
+      setText(content);
+    } catch {
+      setError(t("flows.importN8nInvalid"));
+    } finally {
+      // Reset file input so same file can be selected again
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange} title={t("flows.importN8nTitle")} closeLabel={t("common.close")}>
+      <p className="mt-2 text-sm text-muted">{t("flows.importN8nHint")}</p>
+      {/* The input's name must differ from the button's: an unnamed/duplicate-name file input and the button both
+          expose role "button", so a shared label makes the visible control ambiguous to assistive tech and tests. */}
+      <input ref={fileRef} type="file" accept=".json,application/json" className="sr-only" aria-label={t("flows.importN8nFileInput")} tabIndex={-1} onChange={onFile} />
+      <Button variant="ghost" className="mt-2" onClick={() => fileRef.current?.click()}>
+        {t("flows.importN8nFile")}
+      </Button>
+      <Textarea
+        aria-label={t("flows.importN8nLabel")}
+        mono
+        rows={10}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        invalid={error !== null}
+        className="mt-3 w-full"
+      />
+      {error ? (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+      <div className="mt-4 flex justify-end">
+        <Button variant="primary" onClick={submit} loading={create.isPending} disabled={!text.trim()}>
+          {t("flows.importN8nSubmit")}
+        </Button>
+      </div>
+    </Dialog>
+  );
 }
 
 export function Dashboard() {
@@ -105,6 +181,7 @@ export function Dashboard() {
   const router = useRouter();
   // "Create with Copilot" makes no flow until a proposal is approved (no empty drafts left behind).
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const copilotButton = useRef<HTMLButtonElement>(null); // the panel gives focus back here when it closes (Escape or ×)
 
   const filtered = useMemo(() => (flows.data ?? []).filter((f) => f.name.toLowerCase().includes(q.trim().toLowerCase())), [flows.data, q]);
@@ -125,10 +202,14 @@ export function Dashboard() {
         <Button ref={copilotButton} onClick={() => setCopilotOpen(true)} disabledReason={newReason}>
           {t("flows.createWithCopilot")}
         </Button>
+        <Button onClick={() => setImportOpen(true)} disabledReason={newReason}>
+          {t("flows.importN8n")}
+        </Button>
         <Button variant="primary" onClick={() => create.mutate({ name: untitled })} loading={create.isPending} disabledReason={newReason}>
           {t("flows.newFlow")}
         </Button>
       </PageHeader>
+      <ImportN8nDialog open={importOpen} onOpenChange={setImportOpen} />
       {copilotMounted && (
         <div hidden={!copilotVisible} className="fixed inset-y-0 end-0 z-40 w-full max-w-md">
           <CopilotPanel open={copilotVisible} target={{ kind: "new", workspaceId: workspace.id }} onClose={() => setCopilotOpen(false)} returnFocusTo={() => copilotButton.current} onApplied={({ flowId }) => router.push(`/w/${workspace.slug}/flows/${flowId}`)} />
