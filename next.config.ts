@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   devIndicators: false,
   serverExternalPackages: ["pg"],
+  // Keep Next's build worker pool bounded on memory-limited ARM64 and CI hosts.
+  experimental: { cpus: 2 },
   // CI's browser jobs build the test stack after the static leg has already run `tsc --noEmit` on the same commit, so they
   // skip Next's second type-check pass (FLOWLINE_SKIP_BUILD_TYPECHECK=1, set only in gate.yml). Every other build checks types.
   // Also require FLOWLINE_ENV=test so a deploy shell exporting FLOWLINE_SKIP_BUILD_TYPECHECK=1 cannot silently skip type-checking.

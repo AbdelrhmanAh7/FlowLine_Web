@@ -1,0 +1,15 @@
+{
+    "platformManifestDigest":  "sha256:64405e0a42269fc3ac9b53cdf91608d91517eac5e80095f6b36b30f85511a273",
+    "sourceSha":  "5be15b8e782ae46b82ba3dfbb735e85c6ba929de",
+    "localImageId":  "sha256:e0092d1e5d39ab87540ed20950ef51010f163099a1a6b25c20aae5f9dce0fe0e",
+    "imageTag":  "flowline:takeover-bounded-5be15b8-arm64",
+    "sourceTree":  "077469ea1f97d7caadabb5bfabbe55812f30f161",
+    "manifestListDigest":  "sha256:e0092d1e5d39ab87540ed20950ef51010f163099a1a6b25c20aae5f9dce0fe0e",
+    "piVerified":  false,
+    "status":  "PASS_LOCAL_ARM64_BUILD",
+    "platform":  "linux/arm64",
+    "at":  "2026-10-02T23:51:13.4341605Z",
+    "registryPush":  false,
+    "limitations":  "Local build only; source at5be15b8 before later review fixes. No app/Pi/provider/host acceptance or deployment. Docker EOF cause on old31worker build remains unproven.",
+    "reviewedBoundedNextWorkers":  2
+}

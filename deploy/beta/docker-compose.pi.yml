@@ -1,0 +1,133 @@
+# REVIEW TEMPLATE ONLY. Standalone file; never combine with the historical direct-ingress compose file.
+# Owner approval + locally verified ARM64 images + protected server configuration are prerequisites.
+name: flowline-beta-pi
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
+x-app: &app
+  image: ${FLOWLINE_IMAGE:?set exact locally loaded ARM64 image}
+  platform: linux/arm64
+  env_file: .env.beta
+  environment:
+    DATABASE_URL: postgres://flowline:${BETA_DB_PASSWORD:?}@db:5432/flowline
+    BETTER_AUTH_URL: https://${BETA_DOMAIN:?}
+    FLOWLINE_PUBLIC_URL: https://${BETA_DOMAIN:?}
+    FLOWLINE_ENV: beta
+    FLOWLINE_BETA_MODE: invite_only
+    FLOWLINE_BILLING_PADDLE_ENV: sandbox
+    FLOWLINE_BILLING_ALLOW_LIVE: "false"
+    FLOWLINE_WORKER_CONCURRENCY: "1"
+  restart: unless-stopped
+  depends_on: { migrate: { condition: service_completed_successfully } }
+  logging: *logging
+
+services:
+  db:
+    image: postgres:17.6-alpine
+    platform: linux/arm64
+    environment:
+      POSTGRES_USER: flowline
+      POSTGRES_DB: flowline
+      POSTGRES_PASSWORD: ${BETA_DB_PASSWORD:?}
+    volumes: [beta-pg:/var/lib/postgresql/data]
+    command: [postgres, -c, shared_buffers=64MB, -c, max_connections=30]
+    networks: [database]
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    healthcheck: { test: [CMD-SHELL, "pg_isready -U flowline -d flowline"], interval: 5s, retries: 30 }
+    logging: *logging
+
+  migrate:
+    image: ${FLOWLINE_IMAGE:?}
+    platform: linux/arm64
+    environment:
+      DATABASE_URL: postgres://flowline:${BETA_DB_PASSWORD:?}@db:5432/flowline
+    command: [node_modules/.bin/tsx, src/db/migrate.ts]
+    networks: [database]
+    depends_on: { db: { condition: service_healthy } }
+    restart: "no"
+    mem_limit: 384m
+    cpus: 0.5
+    logging: *logging
+
+  web:
+    <<: *app
+    networks: [database, origin, app-egress]
+    volumes: ["./backups:/backups:ro"]
+    mem_limit: 768m
+    cpus: 1.0
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 10s
+      retries: 30
+
+  worker:
+    <<: *app
+    command: [node_modules/.bin/tsx, worker/index.ts]
+    networks: [database, app-egress]
+    mem_limit: 512m
+    cpus: 0.75
+
+  monitor:
+    image: ${FLOWLINE_IMAGE:?}
+    platform: linux/arm64
+    env_file: .env.beta
+    environment: { OPS_BASE: "http://web:3000" }
+    command: [node, scripts/ops/monitor.mjs]
+    networks: [origin, app-egress]
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    depends_on: { web: { condition: service_healthy } }
+    logging: *logging
+
+  caddy:
+    image: caddy:2.10-alpine
+    platform: linux/arm64
+    environment: { BETA_DOMAIN: "${BETA_DOMAIN:?}" }
+    volumes: ["./Caddyfile.tunnel:/etc/caddy/Caddyfile:ro"]
+    networks: [connector, origin]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/data, /config]
+    mem_limit: 128m
+    cpus: 0.25
+    depends_on: { web: { condition: service_healthy } }
+    logging: *logging
+
+  cloudflared:
+    # Select a reviewed ARM64 version/digest before use; deliberately no latest/default tag.
+    image: ${CLOUDFLARED_IMAGE:?set approved cloudflare/cloudflared ARM64 version and digest}
+    platform: linux/arm64
+    command: [tunnel, --no-autoupdate, --config, /etc/cloudflared/config.yml, run]
+    volumes:
+      - type: bind
+        source: ./cloudflared.yml
+        target: /etc/cloudflared/config.yml
+        read_only: true
+        bind: { create_host_path: false }
+      - type: bind
+        source: ${BETA_TUNNEL_CREDENTIALS_FILE:?absolute protected named tunnel credentials file}
+        target: /etc/cloudflared/credentials.json
+        read_only: true
+        bind: { create_host_path: false }
+    networks: [connector, tunnel-egress]
+    restart: unless-stopped
+    read_only: true
+    mem_limit: 128m
+    cpus: 0.25
+    depends_on: [caddy]
+    logging: *logging
+
+# No published ports, host network, Docker socket, or external/shared networks/volumes.
+networks:
+  database: { internal: true }
+  origin: { internal: true }
+  connector: { internal: true }
+  app-egress: {}
+  tunnel-egress: {}
+volumes:
+  beta-pg: {}
