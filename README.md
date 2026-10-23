@@ -127,6 +127,28 @@ routes providers to local test doubles (fake SaaS APIs, OAuth and OIDC on `:4010
 double and a fake Paddle, used only when `FLOWLINE_ENV=test` — tests still add the AI key through the app, like a
 customer). Start from `.env.example` for the shape of `.env.test`.
 
+Sign-up still needs the emailed verification link on the test stack (read it from `/api/test/outbox`). For an external
+automated tester that cannot read the outbox (TestSprite cloud, milestone runs), start a `FLOWLINE_ENV=test` stack with
+`FLOWLINE_TEST_AUTO_VERIFY=1`: new e-mail sign-ups are then created verified, get no verification e-mail, and the
+sign-up form signs them in straight away (issue #124). That stack also stops requiring e-mail verification at all
+(better-auth's `requireEmailVerification` is off), so the sign-up response itself already carries a session. A single
+browser context can opt in with the cookie `fl_test_auto_verify=1` instead (the e2e-army test and
+`e2e/test-auto-verify.spec.ts` set it with their own cookie API); a tester that can only navigate pages (the hub
+verifier) opens `/api/test/auto-verify`, which sets that cookie for its browser and continues to `/sign-up`. Both
+opt-ins and that route work only when `FLOWLINE_ENV` is exactly `test`; anywhere else the cookie opt-in does nothing
+(it is ignored silently) and the route is a 404, so they cannot be enabled on staging, beta or production. There, a
+server refuses to start while `FLOWLINE_TEST_AUTO_VERIFY` has any value (`src/instrumentation.ts` throws from
+`register()`; observed under `next dev`, and the evidence file records that `next start` was not run); code that builds
+auth without that server (scripts, tests) logs exactly one warning instead, before any sign-up is handled, and still
+ignores the variable.
+The private-beta admission check still applies, and Google/GitHub/ZITADEL sign-ups are unaffected.
+The UI is Arabic by default; a tester that drives the forms by their English labels sets the cookie `fl_locale=en`
+first. The labels are then **Create account** on `/sign-up`, **Sign in** on `/sign-in` and **Resend** on
+`/resend-verification` (there is no "Sign Up" button). The `/sign-up` form has exactly three fields — Name, Email and
+Password — and no password-confirmation field (design-reference slide 6). After **Resend** the page answers only
+"If the account is eligible, an email will arrive shortly.": it never says "Verification resent" or anything else
+that would reveal whether the address has an account.
+
 | Check | Command |
 |---|---|
 | Lint / typecheck | `pnpm lint` / `pnpm typecheck` |
@@ -141,8 +163,9 @@ customer). Start from `.env.example` for the shape of `.env.test`.
 | Everything except E2E | `pnpm check` |
 
 The blocking E2E gate for AI pull requests is the `e2e-army` commit status, posted by the hub's verify job: it starts
-the app from the PR branch and runs its FlowLine suite plus up to 8 top-level `e2e-army/*.e2e.ts` files of the branch (`features/` is not
-copied; the hub keeps its own feature suite). A PR that
+the app from the PR branch and runs its FlowLine suite, with up to 8 top-level `e2e-army/*.e2e.ts` files of the branch passed to the same run (`features/` is not
+copied; the hub keeps its own feature suite). The hub copies those files into a dot folder that e2e's default test glob skips, so as of
+2026-10-19 they run only locally ([developer guide](docs/DEVELOPER_GUIDE.md)). A PR that
 changes a user flow adds or updates `e2e-army/<issue>-<flow>.e2e.ts` in its first commit (title `@issue-<N> <criterion>`,
 one goal per `agent.act`, checked with `agent.assert` or an exact `expect`; import only `e2e`, `@e2e-dev/web` and node
 built-ins, because the hub copies the file into its runner). Signed-in tests use the `fl-user` session (a verified user

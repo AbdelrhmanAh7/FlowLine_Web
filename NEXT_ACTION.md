@@ -1,5 +1,9 @@
 # Next action — 2026-10-03
 
+## Issue #124 — harness handoff (2026-10-19)
+
+The branch meets the planner spec's AC1 to AC5 and the CTO's 2026-10-17 orders on PR #135 except the last, which is still open: green CI, `e2e-army` and a fresh CodeRabbit approval on the new head (CodeRabbit skipped `0a64f97` because automatic reviews are disabled; its last review approved `77ad7a31` on 2026-10-10). The QA review on `343e387` requested simplifying the auto-verify description in `AGENTS.md` to focus on the key test-only security constraint; simplified line 33 of `AGENTS.md` and added unit test in `tests/unit/test-auto-verify.test.ts`. Next, the harness: push to PR #135, then get fresh CI, `e2e-army`, verify and CodeRabbit results on the new head. For the hub owner (no issues filed, because the owner's issue freeze is on): check the Claude adapter's output against e2e's response grammar; name the PR copy directory without a leading dot (or add a glob for it to the runner's `tests`) so PR army tests run at all; the verify planner's vocabulary scan covered only `/auth/step-up`, `/sign-in` and `/sign-up`, so it guessed the controls of `/resend-verification`; the stop hook still runs `vitest related` without a test `DATABASE_URL`; and agent steps in a local `e2e` run need the `ai` peer dependency, which this checkout does not resolve.
+
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
@@ -13,6 +17,7 @@ Harness next: push branch `ai/316` and obtain CI and review confirmation.
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
 See [evidence](artifacts/phase-4/issue-204/EVIDENCE.md#revalidation--2026-10-15). No push or PR changes made locally.
+
 ## PR #287 CI repair — 2026-10-16
 
 Main is merged locally; the demo lock readiness race is fixed. Harness must push and obtain

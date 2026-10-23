@@ -34,7 +34,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [pending, setPending] = useState(false);
   const [betaCode, setBetaCode] = useState("");
   const [notVerified, setNotVerified] = useState(false);
-  // Sign-up never signs in: the account is activated from the emailed link. This holds the address we sent it to.
+  // Sign-up does not sign in (except the test-only auto-verify in submit): the account is activated from the emailed
+  // link. This holds the address we sent it to.
   const [sentTo, setSentTo] = useState<string | null>(null);
   const config = useQuery({ queryKey: ["auth-config"], queryFn: () => api<{ google: boolean; github: boolean; zitadel: boolean; betaMode?: "open" | "invite_only" }>("/api/auth-config") });
   const inviteOnly = mode === "sign-up" && config.data?.betaMode === "invite_only";
@@ -74,6 +75,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
         if (res.error) {
           setError(friendly(t, res.error.message ?? res.error.statusText, res.error.status));
           setPending(false);
+          return;
+        }
+        // Test-environment-only (issue 124): the account is already verified and no e-mail was sent. With the server-wide switch
+        // the sign-up has signed in too (it returns a session token); with the per-browser cookie it has not, so sign in
+        // now instead of showing "Check your inbox". If that fails, the sign-in page takes over.
+        if (res.data?.user.emailVerified) {
+          const signedIn = res.data.token ? null : await authClient.signIn.email({ email, password });
+          router.replace(signedIn?.error ? afterVerify : destination);
+          router.refresh();
           return;
         }
         setSentTo(email.trim());
@@ -202,7 +212,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <span className="h-px flex-1 bg-line" /> {t("auth.orEmail")} <span className="h-px flex-1 bg-line" />
           </div>
 
-          {/* Before hydration a submit falls back to a POST with unnamed fields: nothing typed ever lands in a URL. */}
+          {/*
+            Sign-up fields are exactly Name, Email and Password (design-reference slide 6): there is deliberately no
+            password-confirmation field, so no test or generated tester should look for one.
+            Before hydration a submit falls back to a POST with unnamed fields: nothing typed ever lands in a URL.
+          */}
           <form method="post" onSubmit={submit} noValidate className="flex flex-col gap-4">
             {mode === "sign-up" && (
               <Field label={t("auth.name")} htmlFor="name">
