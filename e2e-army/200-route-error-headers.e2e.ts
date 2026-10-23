@@ -75,12 +75,13 @@ async function signedIn(base: string, email: string) {
   return setCookies.map((c) => c.split(";")[0]).join("; ");
 }
 
-/** Assert a response is JSON-bounded error: correct status, code, string message, only error/requestId keys, and never echoes input. */
+/** Assert a response is JSON-bounded error: correct status, code, string message, max response size, allowed error keys, only error/requestId top-level keys, and never echoes input. */
 async function expectBoundedError(res: Response, status: number, code: string, mustNotEcho: string[] = []) {
   expect(res.status).toBe(status);
   expect(res.headers.get("content-type")?.toLowerCase()).toContain("application/json");
   const text = await res.text();
-  let body: { error?: { code?: unknown; message?: unknown } } = {};
+  expect(text.length).toBeLessThan(4096);
+  let body: { error?: Record<string, unknown>; requestId?: unknown } = {};
   expect(() => {
     body = JSON.parse(text);
   }).not.toThrow();
@@ -89,6 +90,11 @@ async function expectBoundedError(res: Response, status: number, code: string, m
   expect(Object.keys(body).sort()).toEqual(Object.keys(body).includes("requestId") ? ["error", "requestId"] : ["error"]);
   expect(body.error).toBeDefined();
   expect(typeof body.error).toBe("object");
+  expect(body.error).not.toBeNull();
+  const allowedErrorKeys = new Set(["code", "message", "details", "requestId"]);
+  for (const key of Object.keys(body.error!)) {
+    expect(allowedErrorKeys.has(key)).toBe(true);
+  }
   expect(body.error?.code).toBe(code);
   expect(typeof body.error?.message).toBe("string");
   expect(text).not.toContain("<html");
