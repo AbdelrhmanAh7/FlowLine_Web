@@ -19,6 +19,33 @@ export interface DesignTemplate {
   graph: FlowGraph;
 }
 
+/** Every action id the graph's integration steps call, deduped, in node order. */
+export function templateActionIds(graph: FlowGraph): string[] {
+  const ids = graph.nodes.flatMap((node) => (node.type === "integration.action" ? [String((node.data.config as { actionId?: unknown }).actionId ?? "")] : []));
+  return [...new Set(ids.filter(Boolean))];
+}
+
+/** Action ids the template's steps call that are not in `available` (the provider registry / catalog). A template with any can't run yet. */
+export function missingTemplateActions(graph: FlowGraph, available: { has(actionId: string): boolean }): string[] {
+  return templateActionIds(graph).filter((id) => !available.has(id));
+}
+
+/**
+ * The templates whose every action `available` provides, in gallery order. A template is offered only once the actions
+ * it calls exist, so the gallery and "Use template" can never hand a user a flow that cannot run (the server refuses
+ * one that slips through with 409 TEMPLATE_UNAVAILABLE, src/server/flows.ts, and publish refuses an unknown action with
+ * UNKNOWN_ACTION, src/server/publish.ts). This makes the dependency self-healing: adding the actions reveals the
+ * template with no change here.
+ */
+export function availableDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): DesignTemplate[] {
+  return templates.filter((t) => missingTemplateActions(t.graph, available).length === 0);
+}
+
+/** The templates held back because an action they call is not in `available` yet, with the missing ids (same order). */
+export function heldBackDesignTemplates(available: { has(actionId: string): boolean }, templates: DesignTemplate[] = DESIGN_TEMPLATES): { template: DesignTemplate; missing: string[] }[] {
+  return templates.map((template) => ({ template, missing: missingTemplateActions(template.graph, available) })).filter((x) => x.missing.length > 0);
+}
+
 const J = (v: unknown) => JSON.stringify(v, null, 2);
 const lines = (...l: string[]) => l.join("\n");
 let e = 0;
