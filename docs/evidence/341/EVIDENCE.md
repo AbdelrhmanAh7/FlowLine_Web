@@ -10,7 +10,7 @@ Review Comments Addressed:
 
 In PR #244, when template validation failed because required app actions were unavailable in the provider registry, the server returned an opaque error: `'That template needs app actions that aren't available yet'`.
 This change updates `createFlow` in `src/server/flows.ts` to identify the missing actions and return a specific, descriptive error message listing them:
-`'That template needs app actions that aren't available yet: <action1>, <action2>'`.
+`'That template needs app actions that aren't available yet: action_one, action_two'`.
 Additionally, `src/engine/design-templates.ts` exports `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates` to inspect graph action requirements and filter available vs held-back design templates.
 
 ## Explicit Numbered Acceptance Criteria
@@ -30,7 +30,7 @@ Additionally, `src/engine/design-templates.ts` exports `templateActionIds`, `mis
 | AC5 (Regression on base) | Demonstrate tests fail before implementation | `nice -n 10 pnpm exec vitest run tests/unit/template-actions.test.ts` (base) | 1 | `TypeError: templateActionIds is not a function`, `Error: Expected HttpError 409 TEMPLATE_UNAVAILABLE, but the promise resolved` |
 | Static | TypeScript typecheck | `pnpm typecheck` | 0 | `tsc --noEmit` passed clean with 0 errors |
 | Static | ESLint code style and hygiene | `pnpm lint` | 0 | `eslint` passed clean with 0 errors and 0 warnings |
-| Gate | Clean diff line count | `git diff --stat origin/main..HEAD` | 0 | ~130 lines changed across code and tests (well below the 300-line limit) |
+| Gate | Clean diff line count | `nice -n 10 git diff --stat origin/main..HEAD` | 0 | 296 insertions, 1 deletion across 6 files (under 300-line limit) |
 
 ## Changed Covering Tests
 
