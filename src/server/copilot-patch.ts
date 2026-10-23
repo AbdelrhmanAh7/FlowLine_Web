@@ -3,7 +3,7 @@ import { NODE_DEFINITIONS } from "@/engine/nodes";
 import { NODE_TYPES, type FlowEdge, type FlowGraph, type FlowNode, type NodeType } from "@/engine/types";
 import { executeGraph, sampleInputFor } from "@/engine/execute";
 import { validateGraph } from "@/engine/validate";
-import { getAction, getProvider, listProviders } from "@/integrations/registry";
+import { getAction, listProviders } from "@/integrations/registry";
 
 /**
  * Copilot's pure patch layer (no database): the patch schema, the catalog shown to the model, and applyPatch —
@@ -111,8 +111,7 @@ export function applyPatch(base: FlowGraph, input: CopilotPatch, conns: { id: st
       const found = getAction(actionId);
       if (!found) {
         const provider = actionId.split(".")[0] ?? "";
-        // Recognize known integrations across all registered providers so pre-GA integrations are distinguished from invalid ones (#313)
-        const known = Boolean(getProvider(provider));
+        const known = listProviders().some((p) => p.id === provider);
         err(known ? "UNKNOWN_ACTION" : "UNKNOWN_INTEGRATION", known ? `"${actionId}" isn't an action of this integration` : `"${provider || actionId}" isn't an available integration`, id);
         return;
       }
