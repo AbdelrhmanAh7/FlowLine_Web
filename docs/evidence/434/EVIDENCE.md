@@ -48,8 +48,8 @@ Supersedes part of [#383](https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/383
 - `model-effort-routing`: Tool: Gemini 3.8 Flash · Effort: low · Why: typography fix, unit test coverage, and documentation verification.
 
 ## Tested Commit SHA
-- Base commit: `ff98493d0cbda239c838fb605a6d749c0119809d` (origin/main)
+- Base commit: `a95dbf50438b4aa0366eb561f2cebb3f06aa3ea3` (origin/main)
 - Implementation commit: `562b1a9c44830ea4555b50a61d97a5afc5d73eec` (ai/434)
-- Merge commit: `1fd28dbad8f8c2e60a3d46aab6c0442ce87c1734`
+- Merge commit: `9a6f69994c925df7f29dafe4c360814f8263595b`
 - Verified cleanly against local gates: `pnpm typecheck` (rc=0), `pnpm lint` (rc=0), `vitest` (rc=0).
 
