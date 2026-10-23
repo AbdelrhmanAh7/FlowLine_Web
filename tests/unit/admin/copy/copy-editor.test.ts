@@ -79,7 +79,6 @@ describe.each(["en", "ar"] as const)("CopyEditor error display (%s)", (locale) =
     expect(stripTags(html)).toContain(t("platformAdmin.copyEditor.refreshing"));
     expect(html).not.toContain("platformAdmin.copyEditor");
   });
-
   it("renders the step-up warning note when step-up is inactive on initial render", () => {
     const html = render(locale);
     expect(html).toMatch(/<p role="note"[^>]*>/);
