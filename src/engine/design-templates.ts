@@ -20,6 +20,7 @@ export interface DesignTemplate {
 }
 
 const J = (v: unknown) => JSON.stringify(v, null, 2);
+const lines = (...l: string[]) => l.join("\n");
 let e = 0;
 const edge = (source: string, target: string, sourceHandle: string | null = null): FlowEdge => ({ id: `te${++e}-${source}-${target}`, source, target, sourceHandle });
 function n(id: string, type: FlowNode["type"], label: string, x: number, y: number, config: Record<string, unknown>): FlowNode {
@@ -216,6 +217,73 @@ export const DESIGN_TEMPLATES: DesignTemplate[] = [
         n("ignored", "output", "Not an opened PR", 440, 280, { key: "ignored", expression: "true" }),
       ],
       edges: [edge("hook", "opened"), edge("opened", "pr", "true"), edge("pr", "files"), edge("files", "review"), edge("review", "isRisky"), edge("isRisky", "issue", "true"), edge("isRisky", "fine", "false"), edge("opened", "ignored", "false")],
+    },
+  },
+  {
+    id: "deal-won-mizano-quote",
+    name: "Deal won → Mizano quote",
+    description: "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+    category: "Sales",
+    goal: "sales",
+    requires: [
+      { provider: "mizano", purpose: "Create the customer and the draft quote" },
+      { provider: "slack", purpose: "Notify the team when the quote is ready" },
+    ],
+    setup: ["Choose Mizano and Slack connections", "Set the Slack channel ID", "Publish, then point your CRM's deal-won webhook at the flow's URL"],
+    graph: {
+      nodes: [
+        n("deal", "trigger.webhook", "Deal", 0, 160, { signatureScheme: "flowline", samplePayload: J({ deal: { id: "deal_123", name: "Enterprise License", value: 50000, currency: "USD", customer: { name: "Acme Corp", company: "Acme Corp", email: "buyer@acme.com", phone: "+1-555-0123" } } }) }),
+        n("won", "logic.condition", "Deal won?", 260, 160, { expression: 'deal.value > 0' }),
+        n("prepare", "transform.json", "Prepare customer and quote", 520, 160, {
+          config: {
+            expression: lines(
+              "(",
+              '  $c := deal.customer;',
+              '  $lines := [deal.lines ? deal.lines : [{ "item": deal.name, "qty": "1", "unitPrice": $string(deal.value), "taxRate": "0" }]];',
+              '  {',
+              '    "customerName": $c.name,',
+              '    "customerCompany": $c.company,',
+              '    "customerEmail": $c.email,',
+              '    "customerPhone": $c.phone,',
+              '    "currency": deal.currency,',
+              '    "lines": $lines',
+              '  }',
+              ")",
+            ),
+          },
+        }),
+        act("customer", "Mizano — Create customer (needs approval)", 780, 60, "mizano.create_customer", lines(
+          '{',
+          '  "name": $steps.prepare.customerName,',
+          '  "company": $steps.prepare.customerCompany,',
+          '  "email": $steps.prepare.customerEmail,',
+          '  "phone": $steps.prepare.customerPhone,',
+          '  "taxId": ""',
+          '}',
+        ), { requireApproval: true }),
+        act("quote", "Mizano — Create draft quote", 1040, 60, "mizano.create_draft_quote", lines(
+          '{',
+          '  "customerId": $steps.customer.id,',
+          '  "currency": $steps.prepare.currency,',
+          '  "lines": $steps.prepare.lines',
+          '}',
+        )),
+        act("notify", "Slack — Quote ready", 1300, 60, "slack.post_message", lines(
+          '{',
+          '  "channel": "REPLACE_WITH_CHANNEL_ID",',
+          '  "text": "Quote ready for " & $steps.prepare.customerName & " (" & $steps.prepare.customerCompany & ") — " & $string($steps.quote.id)',
+          '}',
+        )),
+        n("skipped", "output", "Deal not won", 780, 280, { key: "skipped", expression: '{ "dealId": deal.id, "reason": "not_won" }' }),
+      ],
+      edges: [
+        edge("deal", "won"),
+        edge("won", "prepare", "true"),
+        edge("prepare", "customer"),
+        edge("customer", "quote"),
+        edge("quote", "notify"),
+        edge("won", "skipped", "false"),
+      ],
     },
   },
 ];

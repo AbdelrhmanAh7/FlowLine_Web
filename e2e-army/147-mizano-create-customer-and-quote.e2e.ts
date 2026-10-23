@@ -119,7 +119,7 @@ test(
     const offeredCard = screen.getByTestId("template-deal-won-mizano-quote");
     await expect(offeredCard).toBeVisible();
     await expect(offeredCard.getByText("Deal won → Mizano quote")).toBeVisible();
-    await expect(offeredCard.getByRole("button", "Use template")).toBeVisible();
+    await expect(offeredCard.getByRole("button", { name: "Use template" })).toBeVisible();
     await agent.assert("a template named Deal won → Mizano quote is listed with a Use template button");
   },
 );
@@ -157,7 +157,7 @@ test(
 
     const card = screen.getByTestId("template-deal-won-mizano-quote");
     await expect(card).toBeVisible();
-    await card.getByRole("button", "Use template").click();
+    await card.getByRole("button", { name: "Use template" }).click();
     await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows\/[0-9a-f-]{36}$/);
     await expect(screen.getByLabel("Flow name")).toHaveValue("Deal won → Mizano quote");
     await expect(screen.getByText("Mizano — Create customer (needs approval)")).toBeVisible();
