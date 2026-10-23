@@ -294,4 +294,70 @@ describe("Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0d
   });
 });
 
+describe("Mizano template Arabic em-dash consistency (#453)", () => {
+  it("src/i18n/messages/ar.json: localTemplates.deal-won-mizano-quote.nodes.customer uses em-dash (—) and strictly no regular hyphen (-)", () => {
+    // Finding from PR #445: Regular hyphen (-) used instead of em-dash (—) for Mizano template customer node label
+    const arTemplates = (ar as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const arMizano = arTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const arNodes = arMizano?.nodes as Record<string, unknown> | undefined;
+    const arCustomer = arNodes?.customer as string | undefined;
+
+    expect(arCustomer, "localTemplates.deal-won-mizano-quote.nodes.customer must be defined in ar.json").toBeDefined();
+    expect(arCustomer).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(arCustomer).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(arCustomer).not.toContain("-");
+    expect(arCustomer).not.toContain("\u2013");
+    expect(arCustomer).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("src/i18n/messages/en.json: localTemplates.deal-won-mizano-quote.nodes.customer uses em-dash (—) and strictly no regular hyphen (-)", () => {
+    const enTemplates = (en as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const enMizano = enTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const enNodes = enMizano?.nodes as Record<string, unknown> | undefined;
+    const enCustomer = enNodes?.customer as string | undefined;
+
+    expect(enCustomer, "localTemplates.deal-won-mizano-quote.nodes.customer must be defined in en.json").toBeDefined();
+    expect(enCustomer).toBe("Mizano — Create customer (needs approval)");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(enCustomer).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(enCustomer).not.toContain("-");
+    expect(enCustomer).not.toContain("\u2013");
+    expect(enCustomer).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("all Mizano template node labels use em-dash (—) and not regular hyphen (-)", () => {
+    const arTemplates = (ar as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const arMizano = arTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const arNodes = arMizano?.nodes as Record<string, unknown> | undefined;
+    const enTemplates = (en as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const enMizano = enTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const enNodes = enMizano?.nodes as Record<string, unknown> | undefined;
+
+    if (arNodes && enNodes) {
+      for (const [key, arVal] of Object.entries(arNodes)) {
+        if (typeof arVal === "string") {
+          const enVal = enNodes[key] as string | undefined;
+          if (enVal) {
+            // Only check nodes that should have em-dash (Mizano/Slack provider prefixes)
+            const shouldHaveEmDash = arVal.includes("Mizano") || arVal.includes("Slack") || enVal.includes("Mizano") || enVal.includes("Slack");
+            if (shouldHaveEmDash) {
+              // Both must use identical em-dash separator " — "
+              expect(arVal, `Arabic node ${key} must contain em-dash (—)`).toContain("\u2014");
+              expect(enVal, `English node ${key} must contain em-dash (—)`).toContain("\u2014");
+              // Neither contains regular hyphen or hyphen-with-spaces
+              expect(arVal, `Arabic node ${key} must not contain regular hyphen (-)`).not.toContain("-");
+              expect(enVal, `English node ${key} must not contain regular hyphen (-)`).not.toContain("-");
+              expect(arVal.includes("-")).toBe(false);
+              expect(enVal.includes("-")).toBe(false);
+            }
+          }
+        }
+      }
+    }
+  });
+});
+
 
