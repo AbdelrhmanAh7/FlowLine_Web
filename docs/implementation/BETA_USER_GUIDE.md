@@ -39,6 +39,7 @@
 ## ٧. الخصوصية والحساب
 - بياناتك تُستخدم لتشغيل مساراتك فقط، ولا تُستخدم لتدريب أي نموذج. لا نجمع محتوى مساراتك في الإحصاءات.
 - **حذف الحساب**: من إعدادات الحساب. ستصلك رسالة تأكيد، والرابط صالح ٣٠ دقيقة. إذا كنت المالك الوحيد لمساحة عمل فيها أعضاء آخرون فانقل الملكية أولاً.
+- **أمان الحساب (التحقق بخطوتين)**: من قائمة المستخدم ثم «الأمان»، يظهر ما إذا كان التحقق بخطوتين مفعّلاً أو غير مفعّل. للتفعيل، اختر «تفعيل»، وأدخل «كلمة مرور الحساب»، ثم أضف «المفتاح السري» إلى تطبيق المصادقة، واحتفظ بـ «رموز النسخ الاحتياطي» خارج الإنترنت (تُعرض مرة واحدة فقط)، ثم أكّد بالرمز المكوّن من ٦ أرقام. للتعطيل، اختر «تعطيل» من الصفحة نفسها وأدخل «كلمة مرور الحساب» فقط (لا يلزم رمز مصادقة)؛ «إلغاء» يتجاهل النموذج دون تغيير الحالة.
 
 ## ٨. المساعدة والإبلاغ عن مشكلة
 - استخدم «الإبلاغ عن مشكلة» من قائمة المستخدم، أو راسل عنوان الدعم الموجود في رسالة الدعوة.
@@ -73,4 +74,5 @@ user menu.
 7. **Privacy:**
    - Your data runs your workflows and isn't used to train models.
    - Deleting your account takes an emailed confirmation link.
+   - Account, Security (user menu) shows whether two-step verification is on or off. To turn it on, choose Enable, enter your account password, add the secret key to your authenticator app, store the backup codes offline (shown once) and confirm with the 6-digit code. To turn it off, choose Disable on the same page and enter your account password (no authentication code is needed); Cancel discards the form without changing the status.
 8. **Help:** use "Report an issue", and include the Request ID shown with any error.
