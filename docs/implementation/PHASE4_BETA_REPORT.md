@@ -399,5 +399,15 @@ Resolved `fl-integrations` stable gate failure on main:
 4. Updated `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to assert 12 providers and verify Arabic RTL layout without Mizano, keeping top-level e2e-army files capped at ≤8.
 5. All 53 contract tests in `tests/contract/mizano*.test.ts` continue to pass.
 
+## Template gallery: Deal won → Mizano quote template and Arabic localization (issue #421, supersedes part of #410) — 2026-10-23
+
+Resolved QA blocker finding `a92221d3e947` from PR #410 and round 2 finding `2d1e3566020d`:
+1. Registered `deal-won-mizano-quote` in `DESIGN_TEMPLATES` in `src/engine/design-templates.ts` with webhook/manual trigger, condition `deal.stage = "won"`, transform node formatting two-decimal amounts for Mizano, customer creation node requiring approval (`requireApproval: true`), draft quote creation node, Slack notify node, and skipped output.
+2. Added `designTemplates.deal-won-mizano-quote` dictionaries to both `src/i18n/messages/en.json` and `src/i18n/messages/ar.json`, ensuring Arabic node labels consistently use em-dash (`—`, U+2014) rather than hyphen (`-`, U+002D) for `customer`, `quote`, and `notify`.
+3. Fixed Playwright `getByRole` overload usage in `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to pass `{ name: "Use template" }` options object.
+4. Covered by 8 unit tests in `tests/unit/deal-won-mizano-template.test.ts`, 7 unit tests in `tests/unit/template-actions.test.ts`, and 19 unit tests in `tests/unit/i18n.test.ts`.
+5. Evidence documented in `docs/evidence/421/EVIDENCE.md`.
+
+
 
 
