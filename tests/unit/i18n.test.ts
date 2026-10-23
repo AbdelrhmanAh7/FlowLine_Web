@@ -199,3 +199,17 @@ describe("local template localization consistency (#340)", () => {
   });
 });
 
+describe("design template localization consistency (#421)", () => {
+  it("deal-won-mizano-quote title uses right-pointing arrow (→) and matches expected Arabic translation", () => {
+    const templates = (ar as unknown as { designTemplates?: Record<string, { name?: string; nodes?: Record<string, string> }> }).designTemplates;
+    const tpl = templates?.["deal-won-mizano-quote"];
+    expect(tpl).toBeDefined();
+    expect(tpl?.name).toBe("صفقة مكسوبة → عرض سعر Mizano");
+    expect(tpl?.name).not.toContain("←");
+    expect(tpl?.nodes?.["customer"]).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
+    expect(tpl?.nodes?.["quote"]).toBe("Mizano — إنشاء مسودة عرض سعر");
+    expect(tpl?.nodes?.["notify"]).toBe("Slack — عرض السعر جاهز");
+  });
+});
+
+
