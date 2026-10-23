@@ -366,6 +366,15 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Blocker breaker: cigroup verify failure investigation (issue #335) — 2026-10-22
+
+Investigated `cigroup:AbdelrhmanAh7/FlowLine_Web:verify` alert across 5 cited PRs (#329, #215, #184, #139, #135).
+Proved via hub verification reports that each failed on independent branch-specific diffs and test planner
+expectations rather than a shared regression on `main`. Cited PRs have been superseded or resolved by fresh
+restarts (#376 merged at `8167bcbb`, #380 passed verify at `311ffd4`, #385 passed verify at `4d69ef1`).
+All CI workflow gates preserved with zero workflow edits (`tests/unit/ci-workflows.test.ts` 82/82 passing).
+Evidence documented in `docs/evidence/335/EVIDENCE.md`.
+
 ## Integrations catalog stable gate fix (issue #313, closes #252, supersedes #263) — 2026-10-22
 
 Resolved `fl-integrations` stable gate failure on main:
