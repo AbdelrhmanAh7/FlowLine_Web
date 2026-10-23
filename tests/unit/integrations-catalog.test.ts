@@ -1,3 +1,4 @@
+// Unit tests asserting the exact catalog provider list, order, pre-GA filtering, and allProviders retention (#252 / #313)
 import { describe, expect, it, vi } from "vitest";
 import { allProviders, getAction, getProvider, listProviders } from "@/integrations/registry";
 import { GET } from "@/app/api/integrations/catalog/route";

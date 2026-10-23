@@ -87,7 +87,7 @@ Output:
 
 ## 6. Review Threads Resolution
 
-1. `src/integrations/registry.ts:17`: Added `PRE_GA` filter (`new Set(["mizano"])`) to exclude Mizano from `listProviders()` while preserving it in `allProviders()`, `getProvider()` and `getAction()` for internal lookups and contract tests.
+1. `src/integrations/registry.ts:17`: Added `PRE_GA_PROVIDERS` filter (`new Set(["mizano"])`) to exclude Mizano from `listProviders()` while preserving it in `allProviders()`, `getProvider()` and `getAction()` for internal lookups and contract tests.
 2. `e2e-army/147-mizano-create-customer-and-quote.e2e.ts:6`: Updated natural language e2e tests within the 8-file cap to verify the 12 supported providers, confirm empty search for Mizano actions, and check Arabic RTL layout without Mizano.
 3. `tests/unit/integrations-catalog.test.ts:1`: Added comprehensive unit tests in `tests/unit/integrations-catalog.test.ts` (5/5 passing) verifying exact 12 catalog IDs in order, filtering of `mizano`, retention in `allProviders()`, and regression proof (base 13 fails vs head 12 passes).
 4. `src/server/copilot-patch.ts:111`: Updated to use `Boolean(getProvider(provider))` instead of searching `listProviders()`, ensuring pre-GA providers and their actions are recognized in Copilot repair and patch validation.

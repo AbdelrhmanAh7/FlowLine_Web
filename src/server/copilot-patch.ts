@@ -111,6 +111,7 @@ export function applyPatch(base: FlowGraph, input: CopilotPatch, conns: { id: st
       const found = getAction(actionId);
       if (!found) {
         const provider = actionId.split(".")[0] ?? "";
+        // Recognize known integrations across all registered providers so pre-GA integrations are distinguished from invalid ones (#313)
         const known = Boolean(getProvider(provider));
         err(known ? "UNKNOWN_ACTION" : "UNKNOWN_INTEGRATION", known ? `"${actionId}" isn't an action of this integration` : `"${provider || actionId}" isn't an available integration`, id);
         return;

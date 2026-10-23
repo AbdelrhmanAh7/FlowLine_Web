@@ -15,12 +15,12 @@ import mizano from "./providers/mizano";
 
 const PROVIDERS: ProviderDef[] = [googleSheets, gmail, slack, hubspot, zendesk, airtable, snowflake, github, stripe, notion, postgres, linear, mizano];
 
-/** Registered but not offered yet: Mizano stays out of the catalog until its connection type and live proof ship (#252 / #313). */
-const PRE_GA = new Set<string>(["mizano"]);
+/** Registered but not offered yet: Mizano stays out of the public catalog until its connection type and live proof ship (#252 / #313). */
+const PRE_GA_PROVIDERS: ReadonlySet<string> = new Set<string>(["mizano"]);
 
-/** The integration catalog: every supported provider, in order. Pre-GA providers are left out (see `allProviders`). */
+/** The integration catalog: every supported SaaS provider, in order (12). Pre-GA providers are excluded (see `allProviders`). */
 export function listProviders(): ProviderDef[] {
-  return PROVIDERS.filter((p) => !PRE_GA.has(p.id));
+  return PROVIDERS.filter((p) => !PRE_GA_PROVIDERS.has(p.id));
 }
 
 /** Every registered provider, pre-GA ones included, for lookups of already-saved steps and connections by id. */
