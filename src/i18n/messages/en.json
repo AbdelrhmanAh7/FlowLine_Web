@@ -2328,16 +2328,16 @@
       "rate": "Too many requests. Try again in an hour.",
       "noToken": "This link has no valid token."
     },
+    "security": {
+      "twoFactor": {
+        "backupCodes": "Backup codes — shown only once, store them offline."
+      }
+    },
     "settings": {
       "title": "Your account",
       "body": "Account-level actions for {email}. They apply to you, not to this workspace.",
       "resendVerification": "Resend verification email",
       "deleteAccount": "Delete account"
-    },
-    "security": {
-      "twoFactor": {
-        "backupCodes": "Backup codes — shown only once, store them offline."
-      }
     }
   },
   "settings": {

@@ -401,13 +401,15 @@ Resolved `fl-integrations` stable gate failure on main:
 
 ## i18n: Arabic typography em-dash consistency for backupCodes (issue #434, split from #383) — 2026-10-23
 
-Resolved localization review finding 232f2a67a05a from PR #383 (parent #165):
+Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and round 1 findings 9d0db94dd27d / 4357ac834349:
 - Added `account.security.twoFactor.backupCodes` to `src/i18n/messages/ar.json` using em-dash (`—`, U+2014) instead of regular hyphen (`-`): `"رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت."`.
 - Added matching English string to `src/i18n/messages/en.json`: `"Backup codes — shown only once, store them offline."`.
-- Added regression test suite in `tests/unit/i18n.test.ts` (`Arabic typography and em-dash consistency (finding 232f2a67a05a, #434)`) asserting typography compliance across all `backupCodes` entries in both catalogues.
-- Demonstrated regression failure on base branch (exit 1, 2 failed tests) and green on head (exit 0, 20/20 passed tests).
+- Aligned key positioning in both catalogues (`account.security` placed adjacent to `account.settings`), ensuring diff visibility during delta review rounds.
+- Added regression test suite in `tests/unit/i18n.test.ts` (`Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0db94dd27d, 4357ac834349, #434)`) asserting typography compliance across all `backupCodes` entries in both catalogues with strict Unicode character checks.
+- Demonstrated regression failure on base branch (exit 1, 2 failed tests) and green on head (exit 0, 22/22 passed tests).
 - Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
 - Evidence documented in `docs/evidence/434/EVIDENCE.md`.
+
 
 
 
