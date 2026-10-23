@@ -34,7 +34,9 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
     body = null;
   }
   if (!res.ok) {
-    const e = (body as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error;
+    // Our own endpoints nest the error under `error`; better-auth returns `{ code, message }` at the top level.
+    const b = body as { error?: { code?: string; message?: string; details?: unknown }; code?: string; message?: string; details?: unknown } | null;
+    const e = b?.error ?? b ?? undefined;
     throw new ApiError(res.status, e?.code ?? `HTTP_${res.status}`, e?.message ?? `Request failed (${res.status})`, e?.details);
   }
   return body as T;

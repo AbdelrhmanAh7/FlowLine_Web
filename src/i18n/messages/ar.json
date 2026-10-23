@@ -133,6 +133,7 @@
     "resetPassword": "تعيين كلمة المرور",
     "resendVerification": "إعادة إرسال التأكيد",
     "deleteAccount": "حذف الحساب",
+    "accountSecurity": "أمان الحساب",
     "billingCheckout": "الدفع"
   },
   "common": {
@@ -241,6 +242,7 @@
     },
     "beta": "تجريبي",
     "userMenu": {
+      "security": "الأمان",
       "signOut": "تسجيل الخروج",
       "reportIssue": "الإبلاغ عن مشكلة",
       "contactSupport": "التواصل مع الدعم",
@@ -2409,6 +2411,30 @@
       "failed": "تعذّر إكمال الطلب. حاول مجددًا.",
       "rate": "طلبات كثيرة. حاول بعد ساعة.",
       "noToken": "هذا الرابط لا يحتوي على رمز صالح."
+    },
+    "security": {
+      "title": "الأمان",
+      "back": "العودة إلى Flowline",
+      "twoFactor": {
+        "title": "التحقق بخطوتين",
+        "on": "مفعّل (نشط)",
+        "off": "غير مفعّل",
+        "enable": "تفعيل",
+        "submit": "إرسال",
+        "cancel": "إلغاء",
+        "password": "كلمة مرور الحساب",
+        "passwordInvalid": "كلمة المرور غير صالحة. حاول مجددًا.",
+        "secret": "المفتاح السري (أضفه إلى تطبيق المصادقة)",
+        "hideSecret": "إخفاء",
+        "showSecret": "إظهار",
+        "backupCodes": "رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.",
+        "backupCodesWarning": "رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.",
+        "copyBackupCodes": "نسخ الرموز",
+        "backupCodesCopied": "تم نسخ الرموز",
+        "codeLabel": "رمز المصادقة",
+        "confirm": "تأكيد التفعيل",
+        "confirmButton": "تأكيد التفعيل"
+      }
     },
     "settings": {
       "title": "حسابك",
