@@ -3,8 +3,8 @@
 // (`PRE_GA` in src/integrations/registry.ts) while `allProviders()` / `getProvider()` keep it registered for already-saved
 // steps and the contract tests. This file asserts that the 12 providers are shown and Mizano is not offered.
 // Real Mizano steps are proved in tests/contract/mizano.test.ts (stateful fake, Idempotency-Key dedupe, AC2 of #147) and
-// tests/contract/mizano-http.test.ts; exact 12 catalog ids pinned by tests/unit/integrations-catalog.test.ts.
-// Mizano joins the public catalog when its scoped API key and connection type ship (MZ G5, #215, #385).
+// tests/contract/mizano-http.test.ts; the exact catalog ids and order are pinned by tests/unit/integrations-catalog.test.ts.
+// Mizano joins the catalog when its connection type and live proof ship (#215, MZ G5).
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 
