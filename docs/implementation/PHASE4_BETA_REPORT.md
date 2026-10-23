@@ -390,5 +390,14 @@ Resolved review findings from PR #244:
 2. **Template action inspection helpers**: In `src/engine/design-templates.ts`, added `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates` helpers to inspect action requirements and filter available vs held-back design templates.
 Covered by unit tests in `tests/unit/template-actions.test.ts` (6/6 passing) and integration tests in `tests/integration/flows.test.ts` (13/13 passing). Regression demonstrated against base failure. Follow-up from #244. Evidence in `docs/evidence/341/EVIDENCE.md`.
 
+## Integrations catalog stable gate fix (issue #313, closes #252, supersedes #263) — 2026-10-23
+
+Resolved `fl-integrations` stable gate failure on main:
+1. Kept pre-GA Mizano out of `listProviders()` in `src/integrations/registry.ts` via `PRE_GA` set filter while retaining internal registration in `allProviders()`, `getProvider()` and `getAction()`.
+2. Verified `GET /api/integrations/catalog` returns exactly 12 supported providers in pinned order with `count: 12`.
+3. Added unit tests in `tests/unit/integrations-catalog.test.ts` (5/5 passing, demonstrating base failure vs head pass).
+4. Updated `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to assert 12 providers and verify Arabic RTL layout without Mizano, keeping top-level e2e-army files capped at ≤8.
+5. All 53 contract tests in `tests/contract/mizano*.test.ts` continue to pass.
+
 
 

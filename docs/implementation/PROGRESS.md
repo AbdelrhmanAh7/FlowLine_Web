@@ -96,3 +96,8 @@ All times are 2026-10-13/14, local. Part of milestone FL G5 · Mizano connector 
 PR #280, 2026-10-19. `data.csv` build keeps columns that first appear in later rows (`src/engine/execute.ts:335-342`);
 test `tests/unit/engine-v2.test.ts` (fails on base, 13/13 on head); typecheck and lint exit 0. The run-input `json` migration 0027 was
 already on main (`39364b5d`). e2e-army run for this head: not run locally (sandbox), to be read from the verify job.
+
+# Stable gate fix — Issue #252 / #313 (`fl-integrations`)
+
+PR #418, 2026-10-22 (supersedes #263, closes #252). The integrations catalog keeps pre-GA Mizano out of `listProviders()` (`src/integrations/registry.ts`) while `allProviders()` / `getProvider()` / `getAction()` preserve registration for lookups and contract tests; `GET /api/integrations/catalog` returns exactly 12 supported providers in pinned order; `tests/unit/integrations-catalog.test.ts` (fails on base, 5/5 on head); `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` asserts 12 providers without Mizano; typecheck and lint exit 0. Evidence in `docs/evidence/313/EVIDENCE.md`.
+
