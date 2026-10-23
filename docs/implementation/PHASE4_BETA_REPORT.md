@@ -1,5 +1,31 @@
 # Flowline Phase 4: launch candidate & private beta report
 
+## Flows list run summary (issue #117) — 2026-10-18
+
+The stable-gate mismatch of `[fl-flows-list.3]` (`publishedVersion: 3` after two runs) was fixed on main by #204/#205
+(run snapshots are unnumbered). This branch adds the run summary the #117 spec asks for. It changes product code:
+
+- `src/server/flows.ts` `listFlows`: `runCount`, `successRate`, `lastRunAt` and `lastRunStatus` cover every run of the
+  flow id, whichever revision it ran. One query: the flow rows plus two `LEFT JOIN LATERAL` subqueries (an ungrouped
+  count over the flow's runs, and an `ORDER BY ... LIMIT 1` lookup for the last run). Ordering: `finished_at desc nulls last, started_at desc nulls last, id desc`.
+  The `nulls last` on `startedAt` is a deliberate refinement over the literal spec text (`startedAt DESC`, which defaults
+  to NULLS FIRST in Postgres), so a running run ranks ahead of a queued one when neither has finished. It is the run that
+  finished last; a run still queued, running or waiting for approval is the last run only while no run of the flow has finished.
+  `lastRunAt` is the run's `finished_at`, or for an in-flight run its `started_at` (or `created_at` while queued).
+- `src/app/api/v1/flows/route.ts`: every row of `GET /api/v1/flows` carries `runCount` (0 when the flow never ran),
+  `lastRunStatus` and `lastRunAt` (null when it never ran).
+- Dashboard consequence: under the new ordering (`finishedAt desc nulls last`), any finished run of the flow takes
+  precedence over an in-flight run. As a result, `dashboard.tsx` shows Running or Needs approval only while no run of
+  the flow has finished yet (e.g. before the flow's first run finishes). Once any run finishes, it reflects the run that
+  finished last, even if a subsequent run is currently in flight. Before this change it showed the newest run by
+  `created_at`, in flight or not.
+- Tests: `tests/integration/flows.test.ts` (runs on both sides of publishing v3, the overlap case, in-flight runs,
+  run-less and paused flows); `e2e-army/features/flows-api.e2e.ts` `[fl-flows-list.4]` (`@issue-117`, request level,
+  tags `feat:fl-flows-list`, `feat:fl-public-api-v1`) covers AC1–AC5 against a test stack.
+  `e2e-army/117-flows-list-dashboard.e2e.ts` is byte-identical to main (spec AC6). The hub copies only top-level
+  `e2e-army/*.e2e.ts`, so the PR's e2e requirement for `fl-flows-api`/`fl-public-api-v1` is waived with that reason.
+- `tests/unit/no-conflict-markers.test.ts` fails on any tracked file that still contains a merge-conflict marker.
+  Earlier resolutions of this branch shipped such markers (PR #139, review round 8).
 
 ## Pilot E2E failure corrections — 2026-10-15
 

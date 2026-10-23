@@ -1,14 +1,19 @@
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
+import { GET as v1FlowsGET } from "@/app/api/v1/flows/route";
 import { db, schema } from "@/db";
 import { requireFlow } from "@/server/access";
+import { createApiKey } from "@/server/apikeys";
 import { resetFaults, setFault } from "@/server/faults";
 import { createFlow, listFlows, listVersions, saveFlow, softDeleteFlow } from "@/server/flows";
+import { publishFlow } from "@/server/publish";
+import { enqueueRun } from "@/server/runs";
 import { createWorkspace } from "@/server/workspaces";
 import type { CurrentUser } from "@/server/access";
 import type { FlowGraph } from "@/engine/types";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
-import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
+import { claimNextRun, processRun } from "../../worker/runner";
+import { claimAndProcess, claimUntil, closeDb, expectHttpError, freshRun, makeUser, unique } from "./helpers";
 
 afterAll(closeDb);
 afterEach(() => resetFaults());
@@ -172,5 +177,133 @@ describe("softDeleteFlow", () => {
     // Row still exists in the DB — it's a soft delete.
     const [row] = await db.select().from(schema.flow).where(eq(schema.flow.id, gone.id));
     expect(row.deletedAt).not.toBeNull();
+  });
+});
+
+describe("flow list run summary (regression: #117)", () => {
+  /** GET /api/v1/flows the way an API client calls it: a Bearer key with flows:read and no session. */
+  async function v1Flows(user: CurrentUser, workspaceId: string) {
+    const { key } = await createApiKey(user, workspaceId, { name: unique("list"), mode: "test", scopes: ["flows:read"] });
+    const res = await v1FlowsGET(new Request("http://localhost/api/v1/flows", { headers: { authorization: `Bearer ${key}` } }), { params: Promise.resolve({}) } as never);
+    expect(res.status).toBe(200);
+    return ((await res.json()) as { flows: Record<string, unknown>[] }).flows;
+  }
+  /** The lead-qualifier graph with its normalise step made to throw, so a run of it fails. */
+  function failing(graph: unknown): FlowGraph {
+    const g = structuredClone(graph as FlowGraph);
+    (g.nodes.find((n) => n.id === "normalise")!.data.config as { expression: string }).expression = '$error("boom")';
+    return g;
+  }
+  async function runToEnd(user: CurrentUser, flowId: string) {
+    const run = await enqueueRun(user, flowId);
+    await claimAndProcess(run.id);
+    return freshRun(run.id);
+  }
+  /** Claims `target` for `worker` without processing it; runs queued before it are processed first. */
+  const claimOnly = (target: string, worker: string) =>
+    claimUntil({ table: "run", targetId: target, claim: (w) => claimNextRun(db, w), process: (id, w) => (id === target ? Promise.resolve() : processRun(db, id, w)), workerId: () => worker });
+  const rowOf = async (workspaceId: string, flowId: string) => (await listFlows(workspaceId)).find((f) => f.id === flowId)!;
+
+  it("GET /api/v1/flows counts a run from before publishing v3 and a succeeded run after it, with lastRunAt = when that run finished", async () => {
+    const { user, ws } = await setup();
+    const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("Spans") });
+    await publishFlow(user, flow.id); // v1
+    await publishFlow(user, flow.id); // v2
+    await save(user, flow.id, { baseRevision: 1, graph: failing(flow.graph) });
+    const before = await runToEnd(user, flow.id);
+    expect(before.status).toBe("failed");
+    await save(user, flow.id, { baseRevision: 2, graph: flow.graph as FlowGraph });
+    await publishFlow(user, flow.id); // v3
+    const after = await runToEnd(user, flow.id);
+    expect(after.status).toBe("succeeded");
+    expect(after.flowVersionId).not.toBe(before.flowVersionId); // the two runs ran different revisions
+
+    expect((await v1Flows(user, ws.id)).find((f) => f.id === flow.id)).toMatchObject({
+      runCount: 2,
+      lastRunStatus: "succeeded",
+      lastRunAt: after.finishedAt!.toISOString(),
+      publishedVersion: 3,
+      paused: false,
+    });
+    const listed = await rowOf(ws.id, flow.id);
+    expect(listed).toMatchObject({ runCount: 2, lastRunStatus: "succeeded", successRate: 0.5, publishedVersion: 3 });
+    expect(listed.lastRunAt).toEqual(after.finishedAt);
+  });
+
+  it("lists a flow that never ran with runCount 0 and null lastRunStatus and lastRunAt in GET /api/v1/flows and the flow list", async () => {
+    const { user, ws } = await setup();
+    const idle = await createFlow(user, ws.id, { name: unique("Idle") });
+    expect((await v1Flows(user, ws.id)).find((f) => f.id === idle.id)).toMatchObject({ runCount: 0, lastRunStatus: null, lastRunAt: null, publishedVersion: null });
+    expect(await rowOf(ws.id, idle.id)).toMatchObject({ runCount: 0, lastRunStatus: null, lastRunAt: null, successRate: null });
+  });
+
+  it("the last run is the run that finished last, even when a newer run finished before it", async () => {
+    const { user, ws } = await setup();
+    const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("Overlap") });
+    const older = await enqueueRun(user, flow.id);
+    await save(user, flow.id, { baseRevision: 1, graph: failing(flow.graph) });
+    const newer = await enqueueRun(user, flow.id);
+    // One worker takes the older run and is still busy with it while the newer run is processed and fails.
+    const worker = unique("worker");
+    await claimOnly(older.id, worker);
+    await claimAndProcess(newer.id);
+    await processRun(db, older.id, worker);
+    const [o, n] = [await freshRun(older.id), await freshRun(newer.id)];
+    expect([o.status, n.status]).toEqual(["succeeded", "failed"]);
+    expect(o.finishedAt!.getTime()).toBeGreaterThan(n.finishedAt!.getTime());
+
+    const row = await rowOf(ws.id, flow.id);
+    expect(row).toMatchObject({ runCount: 2, lastRunStatus: "succeeded" });
+    expect(row.lastRunAt).toEqual(o.finishedAt);
+  });
+
+  it("a run in flight is the last run only until a run of the flow finishes; a running run ranks ahead of a queued one", async () => {
+    const { user, ws } = await setup();
+    const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("In flight") });
+    const older = await enqueueRun(user, flow.id);
+    const newer = await enqueueRun(user, flow.id);
+    const worker = unique("worker");
+    let queued: { id: string } | null = null;
+    try {
+      // Nothing has finished: the newest started run is the last run, and a queued run (no startedAt) ranks after it.
+      await claimOnly(older.id, worker);
+      await claimOnly(newer.id, worker);
+      queued = await enqueueRun(user, flow.id);
+      const running = await freshRun(newer.id);
+      expect(running.status).toBe("running");
+      let row = await rowOf(ws.id, flow.id);
+      expect(row).toMatchObject({ runCount: 3, lastRunStatus: "running" });
+      expect(row.lastRunAt).toEqual(running.startedAt);
+
+      // Once the older run finishes it is the last run, although the newer run is still running and one is still queued.
+      await processRun(db, older.id, worker);
+      const done = await freshRun(older.id);
+      expect([done.status, (await freshRun(newer.id)).status, (await freshRun(queued.id)).status]).toEqual(["succeeded", "running", "queued"]);
+      row = await rowOf(ws.id, flow.id);
+      expect(row).toMatchObject({ runCount: 3, lastRunStatus: "succeeded" });
+      expect(row.lastRunAt).toEqual(done.finishedAt);
+    } finally {
+      // Leave nothing queued or running for the tests after this one.
+      for (const id of [older.id, newer.id, queued?.id]) {
+        const status = id ? (await freshRun(id)).status : null;
+        if (status === "running") await processRun(db, id!, worker);
+        else if (status === "queued") await claimAndProcess(id!);
+      }
+    }
+  });
+
+  it("pausing a flow keeps runCount, lastRunStatus and lastRunAt and reports the pause in GET /api/v1/flows and the flow list", async () => {
+    const { user, ws } = await setup();
+    const flow = await createFlow(user, ws.id, { templateId: "lead-qualifier", name: unique("Paused") });
+    const run = await runToEnd(user, flow.id);
+    const summary = async () => {
+      const { runCount, lastRunStatus, lastRunAt, pausedReason } = await rowOf(ws.id, flow.id);
+      return { runCount, lastRunStatus, lastRunAt, pausedReason };
+    };
+    expect(await summary()).toEqual({ runCount: 1, lastRunStatus: "succeeded", lastRunAt: run.finishedAt, pausedReason: null });
+    // A broken connection pauses the flows that use it (pauseFlowsUsingConnection writes this reason).
+    await db.update(schema.flow).set({ pausedReason: "connection:x:expired", pausedAt: new Date() }).where(eq(schema.flow.id, flow.id));
+    expect(await summary()).toEqual({ runCount: 1, lastRunStatus: "succeeded", lastRunAt: run.finishedAt, pausedReason: "connection:x:expired" });
+    expect((await v1Flows(user, ws.id)).find((f) => f.id === flow.id)).toMatchObject({ runCount: 1, lastRunStatus: "succeeded", lastRunAt: run.finishedAt!.toISOString(), paused: true });
   });
 });

@@ -3,7 +3,7 @@
 import { test } from "@e2e-dev/web";
 import { expect } from "e2e";
 import { seeded } from "../lib.ts";
-import { Http, actor, addMember, anonymous, chain, clientOf, createFlow, E, N, newFlow, startRun, uuidRe, waitRun, type Graph, type Json } from "./_helpers.ts";
+import { Http, actor, addMember, anonymous, chain, clientOf, connect, createFlow, E, N, newFlow, slackPost, startRun, uuidRe, waitRun, withKey, type Graph, type Json } from "./_helpers.ts";
 
 const codes = (issues: { code: string }[]) => issues.map((i) => i.code);
 
@@ -99,6 +99,41 @@ test("[fl-flows-list.3] the flow list and the dashboard numbers summarise each f
   expect(overview).toMatchObject({ flows: 3, flowsRun24h: 2, runs24h: 3, failed24h: 1, activeRuns: 0 });
   expect(overview.successRate24h).toBeCloseTo(2 / 3, 5);
   expect(overview.recent).toHaveLength(3);
+});
+
+test("@issue-117 [fl-flows-list.4] GET /api/v1/flows and the flow list count runs on both sides of publishing v3 and keep run-less and paused flows", { tags: ["feat:fl-flows-list", "feat:fl-public-api-v1", "shard:flows-api", "lvl:api"] }, async () => {
+  const { http } = await actor("flows-list-v1");
+  const ws = (await http.post("/api/workspaces", { json: { name: `Spans ${seeded("fl-list-v1-ws", 4)}` } })).json.workspace;
+  const w = `/api/workspaces/${ws.id}`;
+  const slack = await connect(http, ws.id, "slack", `Slack ${seeded("fl-list-v1-slack", 4)}`);
+  const finished = async (flowId: string) => waitRun(http, (await startRun(http, flowId)).json.run.id);
+  // v1 and v2 publish a step that fails, so the run before v3 fails; v3 posts to Slack instead, and the run after it succeeds.
+  const flow = await newFlow(http, ws.id, `Spans ${seeded("fl-list-v1-flow", 4)}`, chain({ n: 1 }, '$number("x")'));
+  for (let i = 0; i < 2; i++) expect((await http.post(`/api/flows/${flow.id}/publish`)).status).toBe(201);
+  const before = await finished(flow.id);
+  expect(before.status).toBe("failed");
+  const posting: Graph = { nodes: [N.manual(), slackPost(slack.id, `Spans ${seeded("fl-list-v1-text", 6)}`), N.output("out", "sent")], edges: [E("t", "post"), E("post", "out")] };
+  expect((await http.put(`/api/flows/${flow.id}`, { json: { baseRevision: flow.revision, graph: posting } })).status).toBe(200);
+  expect((await http.post(`/api/flows/${flow.id}/publish`)).status).toBe(201);
+  const after = await finished(flow.id);
+  expect(after.status).toBe("succeeded");
+  expect(Date.parse(after.finishedAt)).toBeGreaterThan(Date.parse(before.finishedAt));
+  const idle = await createFlow(http, ws.id, { name: `Idle ${seeded("fl-list-v1-idle", 4)}` });
+  const key = (await http.post(`${w}/api-keys`, { json: { name: `List ${seeded("fl-list-v1-key", 4)}`, mode: "test", scopes: ["flows:read"] } })).json.key as string;
+  const v1 = async () => { const r = await withKey(key).get("/api/v1/flows"); expect(r.status).toBe(200); return (id: string) => (r.json.flows as Json[]).find((f) => f.id === id); };
+  const list = async () => { const rows = (await http.get(`${w}/flows`)).json.flows as Json[]; return (id: string) => rows.find((f) => f.id === id); };
+
+  // AC1-AC3: both runs count, and the last run is the one that finished last, at the time it finished.
+  const summary = { runCount: 2, lastRunStatus: "succeeded", lastRunAt: after.finishedAt };
+  expect((await v1())(flow.id)).toMatchObject({ ...summary, publishedVersion: 3, paused: false });
+  expect((await list())(flow.id)).toMatchObject({ ...summary, successRate: 0.5, publishedVersion: 3, pausedReason: null });
+  // AC4: a flow that never ran is still listed, with no runs and no last run.
+  expect((await v1())(idle.id)).toMatchObject({ runCount: 0, lastRunStatus: null, lastRunAt: null, publishedVersion: null });
+  expect((await list())(idle.id)).toMatchObject({ runCount: 0, lastRunStatus: null, lastRunAt: null, successRate: null });
+  // AC5: removing the Slack connection pauses the flow that uses it; its run summary stays the same.
+  expect((await http.del(`/api/connections/${slack.id}`)).status).toBe(200);
+  expect((await v1())(flow.id)).toMatchObject({ ...summary, paused: true });
+  expect((await list())(flow.id)).toMatchObject({ ...summary, pausedReason: `connection:${slack.id}:removed` });
 });
 
 // ── fl-flow-validation ───────────────────────────────────────────────────────────────────────────────────────────────
