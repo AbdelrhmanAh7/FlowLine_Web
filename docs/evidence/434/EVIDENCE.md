@@ -58,8 +58,7 @@ Addresses Round 1 QA Review Findings on `ecef5fa`:
 
 ## Tested Commit SHA
 - Base commit: `a95dbf50438b4aa0366eb561f2cebb3f06aa3ea3` (origin/main)
-- Implementation commit: `562b1a9c44830ea4555b50a61d97a5afc5d73eec` (ai/434)
-- Merge commit: `9a6f69994c925df7f29dafe4c360814f8263595b`
+- Implementation commit: `9abfa3ea561fcda8a281d02018eebb1443f200a6` (ai/434)
 - Verified cleanly against local gates: `pnpm typecheck` (rc=0), `pnpm lint` (rc=0), `vitest` (rc=0).
 
 
