@@ -399,5 +399,17 @@ Resolved `fl-integrations` stable gate failure on main:
 4. Updated `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to assert 12 providers and verify Arabic RTL layout without Mizano, keeping top-level e2e-army files capped at ≤8.
 5. All 53 contract tests in `tests/contract/mizano*.test.ts` continue to pass.
 
+## i18n: Arabic typography em-dash consistency for backupCodes (issue #434, split from #383) — 2026-10-23
+
+Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and round 1 findings 9d0db94dd27d / 4357ac834349:
+- Added `account.security.twoFactor.backupCodes` to `src/i18n/messages/ar.json` using em-dash (`—`, U+2014) instead of regular hyphen (`-`): `"رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت."`.
+- Added matching English string to `src/i18n/messages/en.json`: `"Backup codes — shown only once, store them offline."`.
+- Aligned key positioning in both catalogues (`account.security` placed adjacent to `account.settings`), ensuring diff visibility during delta review rounds.
+- Added regression test suite in `tests/unit/i18n.test.ts` (`Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0db94dd27d, 4357ac834349, #434)`) asserting typography compliance across all `backupCodes` entries in both catalogues with strict Unicode character checks.
+- Demonstrated regression failure on base branch (exit 1, 2 failed tests) and green on head (exit 0, 22/22 passed tests).
+- Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
+- Evidence documented in `docs/evidence/434/EVIDENCE.md`.
+
+
 
 

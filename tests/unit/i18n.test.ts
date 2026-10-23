@@ -199,3 +199,99 @@ describe("local template localization consistency (#340)", () => {
   });
 });
 
+describe("Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0db94dd27d, 4357ac834349, #434)", () => {
+  it("src/i18n/messages/ar.json: account.security.twoFactor.backupCodes uses em-dash (—) and strictly no regular hyphen (-) (finding 9d0db94dd27d)", () => {
+    // Finding 9d0db94dd27d / 232f2a67a05a: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes
+    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const arSecurity = arAccount?.security as Record<string, unknown> | undefined;
+    const arTwoFactor = arSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const arBackupCodes = arTwoFactor?.backupCodes as string | undefined;
+
+    expect(arBackupCodes, "account.security.twoFactor.backupCodes must be defined in ar.json").toBeDefined();
+    expect(arBackupCodes).toBe("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(arBackupCodes).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(arBackupCodes).not.toContain("-");
+    expect(arBackupCodes).not.toContain("\u2013");
+    expect(arBackupCodes).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("src/i18n/messages/en.json: account.security.twoFactor.backupCodes uses em-dash (—) and strictly no regular hyphen (-) (finding 4357ac834349)", () => {
+    // Finding 4357ac834349: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes in en.json
+    const enAccount = (en as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const enSecurity = enAccount?.security as Record<string, unknown> | undefined;
+    const enTwoFactor = enSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const enBackupCodes = enTwoFactor?.backupCodes as string | undefined;
+
+    expect(enBackupCodes, "account.security.twoFactor.backupCodes must be defined in en.json").toBeDefined();
+    expect(enBackupCodes).toBe("Backup codes — shown only once, store them offline.");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(enBackupCodes).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(enBackupCodes).not.toContain("-");
+    expect(enBackupCodes).not.toContain("\u2013");
+    expect(enBackupCodes).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("account.security.twoFactor.backupCodes is structurally and typographically consistent between Arabic and English", () => {
+    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const arVal = ((arAccount?.security as Record<string, unknown>)?.twoFactor as Record<string, unknown>)?.backupCodes as string;
+    const enAccount = (en as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const enVal = ((enAccount?.security as Record<string, unknown>)?.twoFactor as Record<string, unknown>)?.backupCodes as string;
+
+    expect(arVal).toBeDefined();
+    expect(enVal).toBeDefined();
+
+    // Both must use identical em-dash separator " — "
+    expect(arVal).toContain(" — ");
+    expect(enVal).toContain(" — ");
+
+    // Neither contains regular hyphen or hyphen-with-spaces
+    expect(arVal).not.toContain(" - ");
+    expect(enVal).not.toContain(" - ");
+    expect(arVal.includes("-")).toBe(false);
+    expect(enVal.includes("-")).toBe(false);
+  });
+
+  it("all backupCodes messages across catalogues use em-dash (—) and not regular hyphen (-)", () => {
+    expect(ar.platformAdmin.setup.backupCodes).toContain("—");
+    expect(ar.platformAdmin.setup.backupCodes).not.toContain("-");
+    expect(en.platformAdmin.setup.backupCodes).toContain("—");
+    expect(en.platformAdmin.setup.backupCodes).not.toContain("-");
+
+    function findBackupCodes(obj: unknown, path = ""): { path: string; val: string }[] {
+      if (!obj || typeof obj !== "object") return [];
+      const res: { path: string; val: string }[] = [];
+      for (const [k, v] of Object.entries(obj)) {
+        const p = path ? `${path}.${k}` : k;
+        if (k === "backupCodes" && typeof v === "string") {
+          res.push({ path: p, val: v });
+        } else if (typeof v === "object" && v !== null) {
+          res.push(...findBackupCodes(v, p));
+        }
+      }
+      return res;
+    }
+
+    const arCodes = findBackupCodes(ar);
+    const enCodes = findBackupCodes(en);
+
+    expect(arCodes.length).toBeGreaterThanOrEqual(2);
+    expect(enCodes.length).toBeGreaterThanOrEqual(2);
+
+    for (const item of arCodes) {
+      expect(item.val, `Arabic key ${item.path} must contain em-dash (—)`).toContain("\u2014");
+      expect(item.val, `Arabic key ${item.path} must not contain regular hyphen (-)`).not.toContain("-");
+      expect(item.val, `Arabic key ${item.path} must not contain en-dash (–)`).not.toContain("\u2013");
+    }
+
+    for (const item of enCodes) {
+      expect(item.val, `English key ${item.path} must contain em-dash (—)`).toContain("\u2014");
+      expect(item.val, `English key ${item.path} must not contain regular hyphen (-)`).not.toContain("-");
+      expect(item.val, `English key ${item.path} must not contain en-dash (–)`).not.toContain("\u2013");
+    }
+  });
+});
+
+
