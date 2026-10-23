@@ -383,6 +383,13 @@ Resolved non-blocking P3 localization review finding from PR #334 on `deal-won-m
 - Demonstrated regression failure on base state (3 failures, rc=1) and 61/61 passes on head state (rc=0).
 - Evidence documented in `docs/evidence/340/EVIDENCE.md`.
 
+## Template validation: detailed missing actions error (issue #341) — 2026-10-23
+
+Resolved review findings from PR #244:
+1. **Template validation error specificity**: In `src/server/flows.ts` (`createFlow`), when template validation detects missing app actions that are not registered in the provider registry, the error message now lists the missing action IDs explicitly (`That template needs app actions that aren't available yet: action_one, action_two`) instead of a generic opaque rejection.
+2. **Template action inspection helpers**: In `src/engine/design-templates.ts`, added `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates` helpers to inspect action requirements and filter available vs held-back design templates.
+Covered by unit tests in `tests/unit/template-actions.test.ts` (6/6 passing) and integration tests in `tests/integration/flows.test.ts` (13/13 passing). Regression demonstrated against base failure. Follow-up from #244. Evidence in `docs/evidence/341/EVIDENCE.md`.
+
 ## i18n: Arabic typography em-dash consistency for backupCodes (issue #434, split from #383) — 2026-10-23
 
 Resolved localization review finding 232f2a67a05a from PR #383 (parent #165):
@@ -392,7 +399,6 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165):
 - Demonstrated regression failure on base branch (exit 1, 2 failed tests) and green on head (exit 0, 20/20 passed tests).
 - Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
 - Evidence documented in `docs/evidence/434/EVIDENCE.md`.
-
 
 
 
