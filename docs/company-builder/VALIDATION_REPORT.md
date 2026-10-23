@@ -81,11 +81,10 @@ Rough size: 1 pack step + 1 action executor + lifecycle rule + tests. It's a new
 
 ## 3. Track A — sample / rules-only (the only track exercised)
 
-Frozen packet: `packet/packet.json`, sha256 `4fa9841b…`, committed in `ec35061` before any product ran. It is split,
-by derivation only, into:
+Frozen packet: `packet/packet.json`, sha256 `4fa9841b…`, committed in `ec35061` before any product ran. A scoring-gap fix (#142) added `packet.v2.json` (sha256 `3684c632…`) with new evaluator fields (`closedDay`, `mustQualifyOwnerDecision`) and updated the scorer to read `PACKET` env (default `packet.json`). Old runs 1–4 remain reproducible against v1. The packets are split, by derivation only, into:
 
-- `participant-input.json`: business facts, approved policies and requests;
-- `evaluator-ground-truth.json`: expectations, invariants, prohibited outcomes and scoring rule.
+- `participant-input.json`, `participant-input.v2.json`: business facts, approved policies and requests;
+- `evaluator-ground-truth.json`, `evaluator-ground-truth.v2.json`: expectations, invariants, prohibited outcomes and scoring rule.
 
 Flowline was set up only from participant fields. The expectations are read only by the scorer
 (`flowline-field/field.spec.ts`).
@@ -358,3 +357,42 @@ MERGE TO MAIN: requested by the owner 2026-10-01 — see final report.
 
 Still blocked (unchanged from §5): real Google Chrome QA, live Gmail certification, real owner CLI, competitor runs,
 human usability. Still open: R4-RV-04 (latent) and VO-01..06 (observations; VO-03 metric rounding is OPEN), see BUGS.md.
+
+## 11. Packet v2 — scoring-gap fix (#142)
+
+**Issue:** `AbdelrhmanAh7/FlowLine_Web#142`. Two scoring gaps in the frozen field-validation packet: VP-03 Friday/closed-day confirmation was scored as correct, and VP-05/VP-06 owner-decision qualification was not enforced.
+
+**Implementation:**
+- **`packet.v2.json`** (sha256 `3684c632fafa91e116f4095be8f37420041f15b43003c9c02910adfefb5ac11e`): adds `closedDay: true` and a note for VP-03 (2026-10-09 is a Friday; business works Saturday to Thursday) and `mustQualifyOwnerDecision: ["reviewed by the owner", "the owner will decide"]` for VP-05 and VP-06. V1 packets (`packet.json`, `evaluator-ground-truth.json`, `participant-input.json`) remain byte-identical.
+- **`field.spec.ts`**: reads `PACKET` env var (default `packet.json`) so old runs 1–4 remain reproducible. Adds two checks, implemented as pure functions in `tests/helpers/fieldScoring.ts` and pinned by `tests/unit/field-scoring.test.ts`: `closedDay` (date-only ISO date, so `getUTCDay()` is the weekday; the reply must quote the hours line and must not confirm the date) and `ownerDecision` (case-insensitive packet owner wording or an owner-decides sentence in the reply, and no team member named as the decider; approved policy quotes are removed before the check, so a quoted policy line cannot satisfy it). The run summary records `packet` and its hash.
+- **Derived v2 files:** `participant-input.v2.json`, `evaluator-ground-truth.v2.json` with matching `derivedFrom` and updated `derivedFromSha256`. `SHA256SUMS` and `SHA256SUMS.derived` updated.
+
+**Run 5 (packet.v2.json):**
+- **Candidate:** `c2b0541`
+- **Run ID:** `run5-v2-c2b0541`
+- **Result:** **8/10** (failures VP-03: `quotes:Office cleaning starts a`, `closedDay` (expected); VP-06: `noPromise:cancelled`, VF-02 only). VP-05 passes `ownerDecision`.
+- **Evidence:** `validation/20261001-d224cfb/flowline-field/run5-v2-c2b0541/` (`RESULTS.md` committed; per the Evidence rule the raw `results.json` and screenshots are not committed).
+- **Delta vs run 4:** run 4 VP-03 passed under v1 but fails `closedDay` under v2 (no working-hours line); run 4/run 5 VP-05 and VP-06 satisfy `ownerDecision` through the quoted policy line. These re-scorings and the generic-note negative control are committed as unit tests (`tests/unit/field-scoring.test.ts`); run 4's `results.json` itself is not re-scored. VP-06's `noPromise:cancelled` failure is the pre-existing VF-02 fixture ambiguity.
+
+**Notes:**
+- **Decision (option 1, superseded for `ownerDecision`):** the v2 scorer enforces `closedDay` and `ownerDecision`. Run 5 (`run5-v2-c2b0541`) recorded 8/10 under the earlier rule, where a quoted policy line alone satisfied `ownerDecision`. Review on PR #188 (Codex P1) showed that let a reply name a team member as the decider and still pass. The scorer now fails any reply whose decision/review verb is attached to a non-owner party (`TEAM_DECIDER` in `tests/helpers/fieldScoring.ts`; a team member who only relays the owner's decision is accepted), and it no longer counts the owner wording inside a quoted approved line (`scoreOwnerDecision` removes every `approvedInformation` line first, including VP-06's refund-policy line that its `mustQuote` omits), pinned by the reviewers' shapes in `tests/unit/field-scoring.test.ts`. Re-scoring the committed run-4 replies offline under this rule (a unit test, not a new run) gives `ownerDecision` = false for VP-05 and VP-06 and `closedDay` = false for VP-03; run 5's raw results are not committed, so its replies are not re-scored (the product text is unchanged since run 4). Run 5's recorded score is not re-scored: run 6 (below) under the current scorer is the scoring record for #142. The Arabic negated-date boundary bug (ASCII `\b` after Arabic words) is fixed with a Unicode-aware lookahead and pinned in `tests/unit/field-scoring.test.ts`. VP-06 fails only on the VF-02 fixture ambiguity (`mustNotPromise: "cancelled"`), unchanged from runs 1–4, which stays a separate open item. Owner-decision enforcement is verified by the committed negative control (`tests/unit/field-scoring.test.ts`: generic team note fails, owner wording passes). The run-5 VP-03 reply no longer quotes the price line that run 4 did; that is logged as VF-05, a follow-up outside #142.
+- See `artifacts/company-builder/BUGS.md` VF-04 (VP-03 closed-day scoring gap; fixed, confirmed by run 6) and VF-02 (VP-06, unchanged).
+
+**Run 6 (packet.v2.json, scoring record on candidate `a646eaf`):**
+- **Candidate / Run ID:** `a646eaf` / `run6-v2-a646eaf`, isolated test stack (`flowline_test_142`, fake AI provider, no real model; throwaway Postgres 16, CI uses 17). This run predates the subsequent harness sanitizer and SHA256 verification changes.
+- **Result:** **8/10**. VP-03 fails `closedDay` (the reply quotes the price but not the working-hours line for the Friday request); VP-05 and VP-06 pass `ownerDecision` ("The business owner decides this refund or cancellation request."); VP-06 fails only `noPromise:cancelled` (VF-02).
+- **Scorer fix from this run:** the attempt on `63aa045` scored 7/10 because `scoreOwnerDecision` accepted only the two literal packet phrases; `OWNER_DECIDER` now also accepts an owner-decides sentence in the reply's own words (approved quotes still stripped, `TEAM_DECIDER` still fails), pinned in `tests/unit/field-scoring.test.ts`.
+- **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run6-v2-a646eaf/RESULTS.md` (raw `results.json` not committed). It supersedes the run-5 score.
+
+**Run 7 (packet.v2.json, independent reproduction on candidate `92868b0`):**
+- **Candidate / Run ID:** `92868b0` / `run7-v2-92868b0` (2026-10-14, fresh empty `flowline_test_142` database; on candidate `92868b0`, the field harness and everything it imported was byte-identical to `a646eaf`). This run predates the subsequent harness sanitizer and SHA256 verification changes.
+- **Result:** **8/10**, the same per-VP pattern as run 6: VP-03 fails `closedDay` (reply quotes the price but not the working-hours line for the Friday request), VP-05 and VP-06 pass `ownerDecision` ("The business owner decides this refund or cancellation request."), VP-06 fails only `noPromise:cancelled` (VF-02). Review gate and FC-3 (changed answer → new plan version quoting 950 EGP) verified in the same run.
+- **Why:** QA review could not accept a run it could not re-verify; run 7 is the independent, first-hand re-verification of the #142 scoring record on candidate `92868b0`. Both gaps are confirmed live: the Friday confirmation scores as a failure, and owner-decision wording is enforced (replies without it score as failures, pinned by `tests/unit/field-scoring.test.ts` including the committed run-4 replies).
+- **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run7-v2-92868b0/RESULTS.md` (raw `results.json` not committed). Runs 1–6 untouched.
+
+**Run 8 (packet.v2.json, scoring record on the final harness, candidate `565003ae`):**
+- **Candidate / Run ID:** `565003ae` / `run8-v2-565003ae` (2026-10-18, fresh empty `flowline_test_142` database, isolated stack with the fake AI provider). The harness includes the path sanitizer, the byte-level `verifyPacketChecksum` check and the inflected-Arabic scorer fixes.
+- **Result:** **8/10**, the same per-VP pattern as runs 6 and 7: VP-03 fails `closedDay` (no working-hours line for the Friday request), VP-05 and VP-06 pass `ownerDecision`, VP-06 fails only `noPromise:cancelled` (VF-02).
+- **Evidence:** `artifacts/company-builder/validation/20261001-d224cfb/flowline-field/run8-v2-565003ae/RESULTS.md` (raw `results.json` not committed). The scorer was widened only for Arabic negation forms and date escaping, the run-8 replies were re-scored offline by the unit test, and run 8 remains the record. Runs 1–7 are untouched.
+
+**Harness update note:** runs 6 and 7 predate the sanitizer and checksum changes; run 8 is the first run on the updated harness.

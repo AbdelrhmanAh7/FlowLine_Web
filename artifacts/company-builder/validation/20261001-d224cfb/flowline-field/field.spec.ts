@@ -1,7 +1,10 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test, type APIRequestContext } from "@playwright/test";
 import { setupUser } from "../../../../../e2e/helpers";
+import { scoreClosedDay, scoreOwnerDecision } from "../../../../../tests/helpers/fieldScoring";
 import { noPromiseHolds } from "../../../../../src/company-builder/packs/customer-follow-up";
+import { sanitizePacketFileName } from "../../../../../tests/helpers/file-path-sanitizer";
+import { verifyPacketChecksum } from "../../../../../tests/helpers/packet-checksum";
 
 /**
  * Flowline field run of the FROZEN validation packet (sha256 in ../packet/SHA256SUMS). Agent-driven through the real
@@ -9,7 +12,14 @@ import { noPromiseHolds } from "../../../../../src/company-builder/packs/custome
  * Flowline's own evaluator verdict is recorded separately, never used as the score. Failures are kept.
  */
 const DIR = "artifacts/company-builder/validation/20261001-d224cfb";
-const packet = JSON.parse(readFileSync(`${DIR}/packet/packet.json`, "utf8"));
+// The frozen v1 packet (default) or a newer version, e.g. PACKET=packet.v2.json (scoring gaps #142). Old runs stay
+// reproducible against v1 by default; a new run names the packet it scored.
+// PACKET_FILE is sanitized to prevent directory traversal and path injection (throws on invalid input; only an unset or
+// empty PACKET uses the default). The packet bytes must match packet/SHA256SUMS (throws on mismatch).
+const PACKET_FILE = sanitizePacketFileName(process.env.PACKET || "packet.json");
+const packetBytes = readFileSync(`${DIR}/packet/${PACKET_FILE}`);
+const packet = JSON.parse(packetBytes.toString("utf8"));
+const computedSha256 = verifyPacketChecksum(packetBytes, PACKET_FILE, readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8"));
 const OUT = `${DIR}/flowline-field/${process.env.FIELD_RUN ?? "run"}`;
 // Run 1 typed services comma-separated (the instruction at the time). From run 2 the product instructs "name / other
 // name" for one service, so the answer follows the on-screen instruction.
@@ -114,6 +124,11 @@ test("Flowline field run — frozen packet", async ({ page }) => {
       if (e.missing && !e.missingAllowed) checks.missing = JSON.stringify(rec.missing) === JSON.stringify(e.missing);
       for (const q of e.mustQuote ?? []) checks[`quotes:${q.slice(0, 24)}`] = text.includes(q);
       if (e.mustQuoteOneOf) checks.quotesPolicy = e.mustQuoteOneOf.some((q: string) => text.includes(q));
+      // Closed-day (#142, VP-03) and owner-decision (#142, VP-05/VP-06) checks live in tests/helpers/fieldScoring.ts,
+      // where unit tests pin them with positive and negative fixture replies. Every approved line is stripped before the
+      // owner check (VP-06's mustQuote omits the refund-policy line, which would otherwise satisfy it).
+      if (e.closedDay) checks.closedDay = scoreClosedDay(text, e.date);
+      if (e.mustQualifyOwnerDecision) checks.ownerDecision = scoreOwnerDecision(text, e.mustQualifyOwnerDecision, packet.approvedInformation ?? []);
       for (const n of e.mustNotContain ?? []) checks[`noInvented:${n}`] = !text.includes(n);
       for (const n of e.mustNotPromise ?? []) checks[`noPromise:${n}`] = noPromiseHolds(low, [n]);
       if (e.followUpAt) checks.followUp = new Date(String(rec.next_follow_up_at)).getTime() === new Date(e.followUpAt).getTime();
@@ -158,7 +173,8 @@ test("Flowline field run — frozen packet", async ({ page }) => {
 
   const metrics = await req.get(`${base}/sessions/${sid}/experiment`);
   const summary = {
-    packetSha256: readFileSync(`${DIR}/packet/SHA256SUMS`, "utf8").split(" ")[0],
+    packet: PACKET_FILE,
+    packetSha256: computedSha256,
     runAt: new Date().toISOString(),
     mode: "DETERMINISTIC_TEST, sample-data trials through the real worker; agent-driven (times are machine times, NOT human setup time)",
     questionsAsked: asked,
