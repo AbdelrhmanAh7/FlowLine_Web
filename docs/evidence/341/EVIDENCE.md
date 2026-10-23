@@ -76,3 +76,15 @@ Both test files pass 100% (6/6 in `template-actions.test.ts`, 13/13 in `flows.te
 - `tdd` / `test-first engineering`
 - `verification-before-completion`
 - `diagnosing-bugs`
+
+## Deferred Findings
+
+The second review finding from PR #244 regarding the hardcoded `'REPLACE_WITH_CHANNEL_ID'` in `src/engine/design-templates.ts:245` (Slack notification step in the 'Deal won → Mizano quote' template) is **deferred to a follow-up issue blocked on PR #420**.
+
+**Reason for deferral (per CTO decision):**
+- The 'Deal won → Mizano quote' template is not yet on main (pending in PR #420)
+- Adding parameterization here would conflict with PR #420 and break the ~300-line diff limit
+- The `REPLACE_WITH_[A-Z0-9_]+` convention is enforced by `SETUP_REQUIRED` in `src/engine/validate.ts`, so the placeholder remains a valid fallback
+- A follow-up issue will add a minimal `parameters` schema to `deal-won-mizano-quote` and bind `{{params.slack_channel_id}}` after #420 merges
+
+The third finding (template parameter validation and compatibility guards in `createFlow`) is also **deferred to a second follow-up issue**, dependent on the parameters schema from the first follow-up.
