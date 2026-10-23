@@ -375,13 +375,20 @@ restarts (#376 merged at `8167bcbb`, #380 passed verify at `311ffd4`, #385 passe
 All CI workflow gates preserved with zero workflow edits (`tests/unit/ci-workflows.test.ts` 82/82 passing).
 Evidence documented in `docs/evidence/335/EVIDENCE.md`.
 
+## i18n: RTL arrow consistency in Arabic gallery template string (issue #340) — 2026-10-23
+
+Resolved non-blocking P3 localization review finding from PR #334 on `deal-won-mizano-quote`:
+- Updated `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:361` from `"صفقة مكسوبة ← عرض سعر Mizano"` to `"صفقة مكسوبة → عرض سعر Mizano"`, replacing the leftwards arrow (`←`, U+2190) with the rightwards arrow (`→`, U+2192) for Arabic RTL typographic consistency.
+- Added test coverage in `tests/unit/i18n-content-text.test.ts` and `tests/unit/i18n.test.ts` (`local template localization consistency (#340)`), asserting exact name equality and guarding against misplaced `←` arrows across all local templates.
+- Demonstrated regression failure on base state (3 failures, rc=1) and 61/61 passes on head state (rc=0).
+- Evidence documented in `docs/evidence/340/EVIDENCE.md`.
+
 ## Template validation: detailed missing actions error (issue #341) — 2026-10-23
 
 Resolved review findings from PR #244:
 1. **Template validation error specificity**: In `src/server/flows.ts` (`createFlow`), when template validation detects missing app actions that are not registered in the provider registry, the error message now lists the missing action IDs explicitly (`That template needs app actions that aren't available yet: action_one, action_two`) instead of a generic opaque rejection.
 2. **Template action inspection helpers**: In `src/engine/design-templates.ts`, added `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates` helpers to inspect action requirements and filter available vs held-back design templates.
 Covered by unit tests in `tests/unit/template-actions.test.ts` (6/6 passing) and integration tests in `tests/integration/flows.test.ts` (13/13 passing). Regression demonstrated against base failure. Follow-up from #244. Evidence in `docs/evidence/341/EVIDENCE.md`.
-
 
 
 
