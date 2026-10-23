@@ -2333,6 +2333,11 @@
       "body": "Account-level actions for {email}. They apply to you, not to this workspace.",
       "resendVerification": "Resend verification email",
       "deleteAccount": "Delete account"
+    },
+    "security": {
+      "twoFactor": {
+        "backupCodes": "Backup codes — shown only once, store them offline."
+      }
     }
   },
   "settings": {

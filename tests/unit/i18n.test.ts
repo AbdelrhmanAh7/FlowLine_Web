@@ -199,3 +199,66 @@ describe("local template localization consistency (#340)", () => {
   });
 });
 
+describe("Arabic typography and em-dash consistency (finding 232f2a67a05a, #434)", () => {
+  it("account.security.twoFactor.backupCodes uses em-dash (—) and not regular hyphen (-)", () => {
+    // Finding 232f2a67a05a: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes
+    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const arSecurity = arAccount?.security as Record<string, unknown> | undefined;
+    const arTwoFactor = arSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const arBackupCodes = arTwoFactor?.backupCodes as string | undefined;
+
+    expect(arBackupCodes, "account.security.twoFactor.backupCodes must be defined in ar.json").toBeDefined();
+    expect(arBackupCodes).toBe("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+    expect(arBackupCodes).toContain("—");
+    expect(arBackupCodes).not.toContain(" - ");
+
+    const enAccount = (en as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const enSecurity = enAccount?.security as Record<string, unknown> | undefined;
+    const enTwoFactor = enSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const enBackupCodes = enTwoFactor?.backupCodes as string | undefined;
+
+    expect(enBackupCodes, "account.security.twoFactor.backupCodes must be defined in en.json").toBeDefined();
+    expect(enBackupCodes).toBe("Backup codes — shown only once, store them offline.");
+    expect(enBackupCodes).toContain("—");
+    expect(enBackupCodes).not.toContain(" - ");
+  });
+
+  it("all backupCodes messages across catalogues use em-dash (—) and not regular hyphen (-)", () => {
+    expect(ar.platformAdmin.setup.backupCodes).toContain("—");
+    expect(ar.platformAdmin.setup.backupCodes).not.toContain(" - ");
+    expect(en.platformAdmin.setup.backupCodes).toContain("—");
+    expect(en.platformAdmin.setup.backupCodes).not.toContain(" - ");
+
+    function findBackupCodes(obj: unknown, path = ""): { path: string; val: string }[] {
+      if (!obj || typeof obj !== "object") return [];
+      const res: { path: string; val: string }[] = [];
+      for (const [k, v] of Object.entries(obj)) {
+        const p = path ? `${path}.${k}` : k;
+        if (k === "backupCodes" && typeof v === "string") {
+          res.push({ path: p, val: v });
+        } else if (typeof v === "object" && v !== null) {
+          res.push(...findBackupCodes(v, p));
+        }
+      }
+      return res;
+    }
+
+    const arCodes = findBackupCodes(ar);
+    const enCodes = findBackupCodes(en);
+
+    expect(arCodes.length).toBeGreaterThanOrEqual(2);
+    expect(enCodes.length).toBeGreaterThanOrEqual(2);
+
+    for (const item of arCodes) {
+      expect(item.val, `Arabic key ${item.path} must contain em-dash (—)`).toContain("—");
+      expect(item.val, `Arabic key ${item.path} must not contain regular hyphen (-)`).not.toContain(" - ");
+    }
+
+    for (const item of enCodes) {
+      expect(item.val, `English key ${item.path} must contain em-dash (—)`).toContain("—");
+      expect(item.val, `English key ${item.path} must not contain regular hyphen (-)`).not.toContain(" - ");
+    }
+  });
+});
+
+
