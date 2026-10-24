@@ -20,6 +20,7 @@ import { sha256Hex } from "@/server/crypto";
 import { EgressError, safeFetch } from "@/server/egress";
 import { logEvent } from "@/server/events";
 import { redact } from "@/server/redact";
+import { checkRate } from "@/server/rate-limit";
 import { BudgetExceededError, priceFor, releaseUsage, reserveUsage, settleUsage } from "@/server/usage";
 import { attemptsFor, backoffMs, sleep } from "./retry";
 
@@ -279,6 +280,8 @@ async function aiNode(ctx: HandlerContext, node: FlowNode, cfg: Record<string, u
 
 /* ───────────── Integration actions ───────────── */
 
+const DEFAULT_SENDS_PER_MINUTE = 60;
+
 async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Record<string, unknown>, input: unknown, env: NodeEnv): Promise<NodeOutcome> {
   const found = getAction(str(cfg.actionId));
   if (!found) throw new NodeError("UNKNOWN_ACTION", `Action ${str(cfg.actionId)} isn't available`);
@@ -328,6 +331,18 @@ async function integrationAction(ctx: HandlerContext, node: FlowNode, cfg: Recor
     const gate = await checkGate(ctx.db, { ...gateBase, kind: "approval" });
     if (gate.status === "pending") return { kind: "pause", status: "waiting_approval", message: `Waiting for approval to run ${action.title}`, meta: { approvalId: gate.approvalId } };
     if (gate.status === "rejected") throw new NodeError("APPROVAL_REJECTED", `${action.title} was rejected${gate.note ? `: ${gate.note}` : ""}`);
+  }
+
+  // Counted after approval, so a step waiting for a human uses no send budget.
+  if (action.sideEffect !== "none") {
+    // Validate and clamp maxSendsPerMinute to integer 1..1000 (UI enforces this but server must too)
+    const rawLimit = typeof cfg.maxSendsPerMinute === "number" ? cfg.maxSendsPerMinute : DEFAULT_SENDS_PER_MINUTE;
+    const limit = Number.isFinite(rawLimit) ? Math.max(1, Math.min(1000, Math.floor(rawLimit))) : DEFAULT_SENDS_PER_MINUTE;
+    // Workspace validation already done by getRuntimeCredentials (returns CONNECTION_WORKSPACE if cross-workspace)
+    if (!(await checkRate(`outbound:${connectionId}:${action.id}`, limit))) {
+      await logEvent(ctx.db, { runId: ctx.run.id, workspaceId: ctx.run.workspaceId, type: "outbound_capped", nodeId: node.id, data: { action: action.id, limit } });
+      throw new NodeError("SEND_RATE_LIMITED", `${action.title} reached its send limit of ${limit} per minute. Try again shortly.`, { retryable: true });
+    }
   }
 
   const idemKey = idempotencyKey(ctx, node);

@@ -30,6 +30,28 @@ describe("validateGraph", () => {
     (g.nodes[0].data.config as { samplePayload: string }).samplePayload = "{nope";
     expect(validateGraph(g).map((i) => i.code)).toContain("INVALID_JSON");
   });
+  it("validates maxSendsPerMinute on integration.action nodes", () => {
+    const g: FlowGraph = {
+      nodes: [
+        { id: "trigger", type: "trigger.manual", data: { label: "Trigger", config: { samplePayload: "{}" } }, position: { x: 0, y: 0 } },
+        { id: "act", type: "integration.action", data: { label: "Action", config: { actionId: "zendesk.update", connectionId: "c1", inputMapping: "{}", requireApproval: false, maxSendsPerMinute: 0 } }, position: { x: 100, y: 0 } },
+      ],
+      edges: [{ id: "e1", source: "trigger", target: "act", sourceHandle: "out" }],
+    };
+    expect(validateGraph(g).map((i) => i.code)).toContain("INVALID_SEND_LIMIT");
+
+    (g.nodes[1].data.config as unknown as Record<string, unknown>).maxSendsPerMinute = 1.5;
+    expect(validateGraph(g).map((i) => i.code)).toContain("INVALID_SEND_LIMIT");
+
+    (g.nodes[1].data.config as unknown as Record<string, unknown>).maxSendsPerMinute = 1001;
+    expect(validateGraph(g).map((i) => i.code)).toContain("INVALID_SEND_LIMIT");
+
+    (g.nodes[1].data.config as unknown as Record<string, unknown>).maxSendsPerMinute = 60;
+    expect(validateGraph(g).map((i) => i.code)).not.toContain("INVALID_SEND_LIMIT");
+
+    (g.nodes[1].data.config as unknown as Record<string, unknown>).maxSendsPerMinute = undefined;
+    expect(validateGraph(g).map((i) => i.code)).not.toContain("INVALID_SEND_LIMIT");
+  });
 });
 
 describe("checkConnection", () => {

@@ -181,6 +181,37 @@ describe("API error messages", () => {
   });
 });
 
+<<<<<<< HEAD
+
+describe("Arabic typography and dash consistency (finding 232f2a67a05a)", () => {
+  it("backupCodes messages across catalogues use em-dash (—) and not regular hyphen (-)", () => {
+    expect(ar.platformAdmin.setup.backupCodes).toContain("—");
+    expect(ar.platformAdmin.setup.backupCodes).not.toContain(" - ");
+    expect(en.platformAdmin.setup.backupCodes).toContain("—");
+    expect(en.platformAdmin.setup.backupCodes).not.toContain(" - ");
+
+    // Finding 232f2a67a05a cites account.security.twoFactor.backupCodes (from PR #318 / #327 on branch ai/318).
+    // Ensure account.security.twoFactor.backupCodes strictly uses an em-dash (—) and never a hyphen (-) across both catalogues.
+    expect(ar.account.security.twoFactor.backupCodes).toBe("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+    expect(ar.account.security.twoFactor.backupCodes).toContain("—");
+    expect(ar.account.security.twoFactor.backupCodes).not.toContain(" - ");
+    expect(en.account.security.twoFactor.backupCodes).toBe("Backup codes — store them offline now. They are shown only once.");
+    expect(en.account.security.twoFactor.backupCodes).toContain("—");
+    expect(en.account.security.twoFactor.backupCodes).not.toContain(" - ");
+  });
+
+  it("outbound guardrail messages and node config hints maintain clean typography", () => {
+    expect(ar.config.action.maxSendsPerMinute).toBeDefined();
+    expect(ar.config.action.maxSendsPerMinuteHint).toBeDefined();
+    expect(en.config.action.maxSendsPerMinute).toBeDefined();
+    expect(en.config.action.maxSendsPerMinuteHint).toBeDefined();
+    expect(ar.runEvent.outbound_capped).toBe("تم تحديد معدل الإرسال");
+    expect(en.runEvent.outbound_capped).toBe("outbound capped");
+    expect(ar.settings.audit.guardrailActor).toBe("النظام (حاجز حماية)");
+    expect(en.settings.audit.guardrailActor).toBe("system (guardrail)");
+  });
+});
+
 describe("local template localization consistency (#340)", () => {
   it("deal-won-mizano-quote title uses right-pointing arrow (→) for RTL layout consistency", () => {
     const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string }> }).localTemplates;
@@ -210,11 +241,11 @@ describe("Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0d
     expect(arBackupCodes, "account.security.twoFactor.backupCodes must be defined in ar.json").toBeDefined();
     expect(arBackupCodes).toBe("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
     // Strict Unicode check: em-dash (U+2014) is present
-    expect(arBackupCodes).toContain("\u2014");
+    expect(arBackupCodes).toContain("—");
     // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
     expect(arBackupCodes).not.toContain("-");
-    expect(arBackupCodes).not.toContain("\u2013");
-    expect(arBackupCodes).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+    expect(arBackupCodes).not.toContain("–");
+    expect(arBackupCodes).not.toMatch(/[-‐‑‒–]/);
   });
 
   it("src/i18n/messages/en.json: account.security.twoFactor.backupCodes uses em-dash (—) and strictly no regular hyphen (-) (finding 4357ac834349)", () => {
@@ -227,11 +258,11 @@ describe("Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0d
     expect(enBackupCodes, "account.security.twoFactor.backupCodes must be defined in en.json").toBeDefined();
     expect(enBackupCodes).toBe("Backup codes — shown only once, store them offline.");
     // Strict Unicode check: em-dash (U+2014) is present
-    expect(enBackupCodes).toContain("\u2014");
+    expect(enBackupCodes).toContain("—");
     // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
     expect(enBackupCodes).not.toContain("-");
-    expect(enBackupCodes).not.toContain("\u2013");
-    expect(enBackupCodes).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+    expect(enBackupCodes).not.toContain("–");
+    expect(enBackupCodes).not.toMatch(/[-‐‑‒–]/);
   });
 
   it("account.security.twoFactor.backupCodes is structurally and typographically consistent between Arabic and English", () => {
@@ -281,15 +312,15 @@ describe("Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0d
     expect(enCodes.length).toBeGreaterThanOrEqual(2);
 
     for (const item of arCodes) {
-      expect(item.val, `Arabic key ${item.path} must contain em-dash (—)`).toContain("\u2014");
+      expect(item.val, `Arabic key ${item.path} must contain em-dash (—)`).toContain("—");
       expect(item.val, `Arabic key ${item.path} must not contain regular hyphen (-)`).not.toContain("-");
-      expect(item.val, `Arabic key ${item.path} must not contain en-dash (–)`).not.toContain("\u2013");
+      expect(item.val, `Arabic key ${item.path} must not contain en-dash (–)`).not.toContain("–");
     }
 
     for (const item of enCodes) {
-      expect(item.val, `English key ${item.path} must contain em-dash (—)`).toContain("\u2014");
+      expect(item.val, `English key ${item.path} must contain em-dash (—)`).toContain("—");
       expect(item.val, `English key ${item.path} must not contain regular hyphen (-)`).not.toContain("-");
-      expect(item.val, `English key ${item.path} must not contain en-dash (–)`).not.toContain("\u2013");
+      expect(item.val, `English key ${item.path} must not contain en-dash (–)`).not.toContain("–");
     }
   });
 });
@@ -305,11 +336,11 @@ describe("Mizano template Arabic em-dash consistency (#453)", () => {
     expect(arCustomer, "localTemplates.deal-won-mizano-quote.nodes.customer must be defined in ar.json").toBeDefined();
     expect(arCustomer).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
     // Strict Unicode check: em-dash (U+2014) is present
-    expect(arCustomer).toContain("\u2014");
+    expect(arCustomer).toContain("—");
     // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
     expect(arCustomer).not.toContain("-");
-    expect(arCustomer).not.toContain("\u2013");
-    expect(arCustomer).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+    expect(arCustomer).not.toContain("–");
+    expect(arCustomer).not.toMatch(/[-‐‑‒–]/);
   });
 
   it("src/i18n/messages/en.json: localTemplates.deal-won-mizano-quote.nodes.customer uses em-dash (—) and strictly no regular hyphen (-)", () => {
@@ -321,11 +352,11 @@ describe("Mizano template Arabic em-dash consistency (#453)", () => {
     expect(enCustomer, "localTemplates.deal-won-mizano-quote.nodes.customer must be defined in en.json").toBeDefined();
     expect(enCustomer).toBe("Mizano — Create customer (needs approval)");
     // Strict Unicode check: em-dash (U+2014) is present
-    expect(enCustomer).toContain("\u2014");
+    expect(enCustomer).toContain("—");
     // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
     expect(enCustomer).not.toContain("-");
-    expect(enCustomer).not.toContain("\u2013");
-    expect(enCustomer).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+    expect(enCustomer).not.toContain("–");
+    expect(enCustomer).not.toMatch(/[-‐‑‒–]/);
   });
 
   it("all Mizano template node labels use em-dash (—) and not regular hyphen (-)", () => {
@@ -345,8 +376,8 @@ describe("Mizano template Arabic em-dash consistency (#453)", () => {
             const shouldHaveEmDash = arVal.includes("Mizano") || arVal.includes("Slack") || enVal.includes("Mizano") || enVal.includes("Slack");
             if (shouldHaveEmDash) {
               // Both must use identical em-dash separator " — "
-              expect(arVal, `Arabic node ${key} must contain em-dash (—)`).toContain("\u2014");
-              expect(enVal, `English node ${key} must contain em-dash (—)`).toContain("\u2014");
+              expect(arVal, `Arabic node ${key} must contain em-dash (—)`).toContain("—");
+              expect(enVal, `English node ${key} must contain em-dash (—)`).toContain("—");
               // Neither contains regular hyphen or hyphen-with-spaces
               expect(arVal, `Arabic node ${key} must not contain regular hyphen (-)`).not.toContain("-");
               expect(enVal, `English node ${key} must not contain regular hyphen (-)`).not.toContain("-");
@@ -359,5 +390,4 @@ describe("Mizano template Arabic em-dash consistency (#453)", () => {
     }
   });
 });
-
 

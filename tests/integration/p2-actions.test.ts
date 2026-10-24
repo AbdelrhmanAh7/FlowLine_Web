@@ -378,4 +378,45 @@ describe("connections: expiry, pausing, reconnect, refresh, isolation", () => {
     const events = await db.select().from(schema.runEvent).where(and(eq(schema.runEvent.runId, r2.id), eq(schema.runEvent.type, "step_retry")));
     expect(events).toHaveLength(2); // 3 attempts total
   });
+
+  it("rate limiting validates connection workspace before applying limits", async () => {
+    const { user, flowOf } = await setup("WorkspaceValidation");
+    // Create a different workspace and user, and a connection in that workspace
+    const otherUser = await makeUser("other");
+    const otherWs = await createWorkspace(otherUser, unique("OtherWorkspace"));
+    const otherConn = await createConnection(db, otherUser.id, otherWs.id, "zendesk", "zendesk other", { email: "agent@other.test", token: "test-token", subdomain: "other" });
+    // Create a flow in the first workspace but using the connection from the other workspace
+    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", otherConn.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 1 })));
+    await fake.reset();
+    const r = await enqueueRun(user, flow.id);
+    await claimAndProcess(r.id);
+    // Should fail with CONNECTION_WORKSPACE, not SEND_RATE_LIMITED (rate limit is skipped for invalid connections)
+    expect((await freshRun(r.id)).error?.code).toBe("CONNECTION_WORKSPACE");
+    // No outbound_capped event should be logged for an invalid connection
+    const events = await db.select().from(schema.runEvent).where(and(eq(schema.runEvent.runId, r.id), eq(schema.runEvent.type, "outbound_capped")));
+    expect(events).toHaveLength(0);
+  });
+
+  it("a side-effect action over its per-connection send cap fails with SEND_RATE_LIMITED and logs outbound_capped", async () => {
+    const { user, conn, flowOf } = await setup("SendCap");
+    const zd = await conn("zendesk");
+    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", zd.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 1 })));
+    await fake.reset();
+    const first = await enqueueRun(user, flow.id);
+    await claimAndProcess(first.id);
+    const second = await enqueueRun(user, flow.id);
+    await claimAndProcess(second.id);
+    expect((await freshRun(second.id)).error?.code).toBe("SEND_RATE_LIMITED");
+    const events = await db.select().from(schema.runEvent).where(and(eq(schema.runEvent.runId, second.id), eq(schema.runEvent.type, "outbound_capped")));
+    expect(events).toHaveLength(1);
+  });
+
+  it("a run with an out-of-range maxSendsPerMinute is refused at enqueue and sends nothing", async () => {
+    const { user, conn, flowOf } = await setup("SendCapInvalid");
+    const zd = await conn("zendesk");
+    const flow = await flowOf(chain(trigger({}), action("update", "zendesk.update_ticket", zd.id, '{ "ticketId": 5, "priority": "high" }', { maxSendsPerMinute: 0 })));
+    await fake.reset();
+    const err = await expectHttpError(enqueueRun(user, flow.id), 422, "INVALID_FLOW");
+    expect((err.details as { code: string }[]).map((i) => i.code)).toContain("INVALID_SEND_LIMIT");
+  });
 });

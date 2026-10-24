@@ -166,6 +166,8 @@ export interface IntegrationActionConfig {
   inputMapping: string;
   /** Require human approval (defaults to the action's `sensitive` flag). */
   requireApproval: boolean;
+  /** Cap on side-effecting sends per connection and action per minute (defaults to the platform limit). */
+  maxSendsPerMinute?: number;
   retry?: RetryConfig;
 }
 

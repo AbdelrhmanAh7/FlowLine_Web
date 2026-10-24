@@ -80,6 +80,24 @@ Evidence: `artifacts/phase-4/issue-204/EVIDENCE.md`. Known gap, left for a follo
 from this PR): history orders by `created_at`, the transaction start, so overlapping transactions can list two
 snapshots out of insertion order (see `DESIGN_DECISIONS.md`).
 
+## Outbound guardrails: per-connection send cap — 2026-10-16 (issue #165, partial)
+
+**Delivered (first version):** a per-connection, per-action send cap for side-effecting integration actions.
+
+- `integration.action` nodes accept `maxSendsPerMinute` (integer 1..1000, default 60). `validateGraph` rejects other values with `INVALID_SEND_LIMIT`; the node editor has a number field (empty input removes the override).
+- `worker/handlers.ts` counts a send with `checkRate("outbound:<connection id>:<action id>")` (PostgreSQL sliding window) **after** connection validation and the approval gate, so a step waiting for a human uses no budget and a cross-workspace connection fails with `CONNECTION_WORKSPACE` before any counter is touched. A refused send fails with the retryable `SEND_RATE_LIMITED` and logs an `outbound_capped` run event (`action`, `limit` only). Actions with `sideEffect: "none"` are not capped.
+- The run inspector's event log (`src/app/w/[slug]/runs/inspector.tsx`) renders every run event through `runEvent.<type>`, so `outbound_capped` appears there with an en/ar label.
+
+**Not delivered (stated plainly, not claimed):**
+
+- *Scoped node credentials*: connections remain workspace-scoped; a connection cannot be limited to specific nodes.
+- *Approval gate for high-volume broadcasts*: only the existing per-action `requireApproval`/`sensitive` approval exists; threshold-based approval was deferred by the CTO to a follow-up issue.
+- *Per-destination caps*: the key is connection + action (CTO decision: sufficient for the first version).
+
+Details and open debt: [OUTBOUND_GUARDRAILS.md](../security/OUTBOUND_GUARDRAILS.md).
+
+**Tests:** `tests/unit/engine.test.ts` (`INVALID_SEND_LIMIT`); `tests/integration/p2-actions.test.ts` (cap refuses the second send with `SEND_RATE_LIMITED` and logs one `outbound_capped`; an out-of-range `maxSendsPerMinute` is refused at enqueue with 422 `INVALID_SEND_LIMIT`; cross-workspace connection fails first with no `outbound_capped`); `e2e-army/200-route-error-headers.e2e.ts` (scenario `@issue-165 AC1`) is a request-level guard (anonymous run start is refused) and does **not** exercise the cap, because the hub's throwaway stack has no seeded connection to send through.
+
 ## route() error headers (issue #200) — 2026-10-13
 
 `route()` (`src/server/http.ts`) now sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on every error response it builds (`HttpError`, validation, unhandled 500), not only on the platform success path. Non-platform `route()` success responses are unchanged and not covered. Covered by `tests/integration/route-error-headers.test.ts` (platform copy refusals 404 (member and anonymous) and 403, plus `/api/me` 401 and the cross-site refusal; fails on the old code; 4 tests pass locally) and the request-level `e2e-army/200-route-error-headers.e2e.ts`. [Design item 10](../security/CREDENTIALS_DESIGN.md). Run locally against a disposable PostgreSQL; full CI is pending.

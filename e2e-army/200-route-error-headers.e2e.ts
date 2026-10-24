@@ -1,4 +1,4 @@
-// Issues #200, #179, #322 (supersedes #186, restart of #180) and #323 (supersedes #181): the error/rejection boundary of route() and of /api/platform/copy and /admin/copy. No model: request-level, and AC6 also checks the rendered 404 page in the browser.
+// Issues #200, #179, #322 (supersedes #186, restart of #180), #323 (supersedes #181), and #165: the error/rejection boundary of route(), /api/platform/copy, /admin/copy, and runs enqueue. No model: request-level, and AC6 also checks the rendered 404 page in the browser.
 //
 // #200 AC: route() error responses carry Cache-Control: no-store and Referrer-Policy: no-referrer.
 // #179 AC1: GET /api/platform/copy (getCopyEditorState) never leaks state or an internal error to a non-admin caller.
@@ -9,6 +9,8 @@
 // the admin-only refusals (STEP_UP_REQUIRED, CSRF_TOKEN_INVALID, UNSUPPORTED_MEDIA_TYPE, BODY_TOO_LARGE, VALIDATION,
 // REVISION_CONFLICT, INTERNAL) and how the client's api() turns each into an ApiError are proven in
 // tests/unit/admin-copy-errors.test.ts and tests/contract/errors.test.ts.
+// #165 AC1: an anonymous caller can't start a run that would send outbound messages (the per-connection send cap sits
+// behind authentication). Request-level (no model).
 //
 // AC4/AC5 (UI-level error handling in the copy editor) is covered by e2e/admin-panel.spec.ts in a real browser with the
 // Playwright stack's platform admin, because this throwaway stack has no platform admin.
@@ -170,6 +172,27 @@ test(
       await expect(screen.getByRole("heading", p.editor)).toHaveCount(0);
       expect(await browser.url()).toMatch(/\/admin\/copy$/);
     }
+  },
+);
+
+test(
+  "@issue-165 AC1: an anonymous caller cannot start a run or inspect guardrails",
+  { tags: ["feat:fl-integration-actions", "feat:fl-run-execution", "feat:fl-engine-nodes", "feat:fl-flow-validation", "feat:fl-builder", "feat:fl-i18n-rtl", "feat:fl-audit-log", "lvl:api"] },
+  async ({ app }) => {
+    // Use a UUID that is guaranteed not to exist (not a real flow ID) — all-zero variant makes it obviously fake
+    const fakeFlowId = "00000000-0000-0000-0000-000000000000";
+    const res = await fetch(new URL(`/api/flows/${fakeFlowId}/runs`, app.baseUrl), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect([401, 403, 404]).toContain(res.status);
+    const text = await res.text();
+    expect(text).not.toContain("SEND_RATE_LIMITED");
+    expect(text).not.toContain("runId");
+
+    const auditRes = await fetch(new URL(`/api/workspaces/${fakeFlowId}/audit/guardrails`, app.baseUrl));
+    expect([401, 403, 404]).toContain(auditRes.status);
   },
 );
 
