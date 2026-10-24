@@ -9,6 +9,7 @@ describe("gate groups: manifest coverage", () => {
     const assigned = Object.keys(GROUPS).flatMap((g) => groupFiles(GROUPS, g)).sort();
     expect(assigned).toEqual(onDisk);
     expect(listSpecFiles()).toEqual(onDisk);
+    expect(GROUPS.auth.specs).toContain("account-security");
     expect(checkManifest()).toEqual([]);
   });
 

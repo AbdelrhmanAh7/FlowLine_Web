@@ -72,3 +72,32 @@ test("@issue-85 core flow: a signed-in user creates a blank flow and its canvas 
   await expect(screen.getByText("Start with a trigger")).toBeVisible();
   await agent.assert("the flow builder canvas is shown and invites the user to start with a trigger");
 });
+
+test("@issue-319 AC1: the user menu opens the security page showing two-step verification Off", { session: "fl-user", tags: ["feat:fl-workspace-nav"] }, async ({ app, screen, agent, browser }) => {
+  needsModel();
+  await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
+  await app.open("/app");
+  await agent.act("open the user menu by clicking the user avatar or initials button at the bottom of the navigation rail");
+  await expect(screen.getByRole("menuitem", "Security")).toBeVisible();
+  await agent.act("click Security in the user menu");
+  await expect(browser).toHaveURL("/account/security");
+  await expect(screen.getByRole("heading", { level: 1 })).toHaveText("Security");
+  await expect(screen.getByRole("heading", "Two-step verification")).toBeVisible();
+  await expect(screen.getByText("Off")).toBeVisible();
+  await agent.assert("the account security page says that two-step verification is off");
+});
+
+test("@issue-319 AC4: the security page is Arabic and right-to-left, with the two-step status at the end of its row", { session: "fl-user", tags: ["feat:fl-i18n-rtl"] }, async ({ app, screen, browser }) => {
+  await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
+  await app.open("/account/security");
+  expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+  await expect(screen.getByRole("heading", { level: 1 })).toHaveText("الأمان");
+  await expect(screen.getByRole("heading", "التحقق بخطوتين")).toBeVisible();
+  await expect(screen.getByText("غير مفعّل")).toBeVisible();
+  // logical layout: in RTL the row starts on the right (the title) and ends on the left (the status badge)
+  expect(await browser.evaluate(() => {
+    const h2 = document.querySelector("main h2")!, badge = h2.nextElementSibling!;
+    return badge.getBoundingClientRect().right <= h2.getBoundingClientRect().left;
+  })).toBe(true);
+});
+
