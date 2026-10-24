@@ -184,6 +184,16 @@ What it changed:
 - Release input policy unit test (`tests/unit/release-input-policy.test.ts`) updated to enforce Node 24 across package support, CI setup, Dockerfile base and sandbox image.
 - Verification: unit tests (97 files, 1,247 tests), contract tests (23 files, 468 tests), linting, TypeScript typechecking, and Next.js production build all pass cleanly on Node 24. Live CI pipeline verification occurs on PR `gate` run.
 
+### Mizano connector money validation in zod transform (Issue #296)
+
+Status: **implemented on ai/296**, superseding part of #279 (parent #232).
+
+What it changed:
+- `src/integrations/providers/mizano.ts`: resolved Sonnet 5.5 review finding where `moneyInput` threw a raw `Error` inside a Zod `.transform`, which escaped `safeParse`/`parse` as an unhandled exception causing 500 crashes instead of clean validation issues.
+- Replaced thrown raw `Error` with `ctx.addIssue({ code: z.ZodIssueCode.custom, message })` and returned `z.NEVER`, handling negative values, non-decimal strings, non-finite values, and excess precision cleanly.
+- Updated `mizano.create_draft_quote` input schema to use `moneyInput` for `qty`, `unitPrice`, and `taxRate`.
+- Verification: unit tests in `tests/unit/mizano-money-input.test.ts` (10/10 pass) verify safeParse never throws, parse throws ZodError, and numbers/strings normalize to 2-decimal-place strings (including Arabic-Indic digits); `tests/unit/i18n-content-text.test.ts` (41/41 pass); contract tests in `tests/contract/mizano.test.ts` (50/50 pass) and `tests/contract/mizano-http.test.ts` (3/3 pass). E2E: not needed (internal schema validation logic).
+
 ## Current execution — 2026-09-30
 
 The binding [beta execution brief](BETA_EXECUTION_BRIEF.md) supersedes the historical account/host instructions below. Current ledger: [BETA_EXECUTION_STATUS.md](BETA_EXECUTION_STATUS.md); owner handoffs: [OWNER_ACTIONS.md](OWNER_ACTIONS.md). The following older `e42667d` evidence remains historical and does not certify the design-v2/AI-hub candidate.

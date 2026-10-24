@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { checkUrl, EgressError } from "@/server/egress";
 import { ProviderError, type Credentials, type ProviderDef } from "../types";
+import { toDecimalString } from "@/lib/format";
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MONEY = /^\d+\.\d{2}$/;
@@ -54,6 +55,30 @@ type MizanoCustomer = z.infer<typeof _mizanoCustomerSchema>;
 const decimalString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
+
+// Accepts a number or a decimal string, normalizes to a fixed-scale (2) decimal string.
+// Rejects negative values, non-decimal values, or excess precision for qty, unitPrice, taxRate.
+// Uses ctx.addIssue and returns z.NEVER so validation errors are reported cleanly without throwing
+// raw Errors from transform (which escapes safeParse/parse and causes unhandled 500 crashes).
+export const moneyInput = z.union([z.number(), z.string()]).transform((val, ctx) => {
+  try {
+    const result = toDecimalString(val, 2);
+    if (result.startsWith("-")) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "must be a positive decimal string with up to 2 decimal places",
+      });
+      return z.NEVER;
+    }
+    return result;
+  } catch (err) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: err instanceof Error ? err.message : "must be a valid decimal string with up to 2 decimal places",
+    });
+    return z.NEVER;
+  }
+});
 
 const provider: ProviderDef = {
   id: "mizano",
@@ -183,9 +208,9 @@ const provider: ProviderDef = {
         lines: z.array(
           z.object({
             item: z.string().min(1).max(200),
-            qty: decimalString,
-            unitPrice: decimalString,
-            taxRate: decimalString,
+            qty: moneyInput,
+            unitPrice: moneyInput,
+            taxRate: moneyInput,
           }),
         ).min(1).max(200),
       }),
