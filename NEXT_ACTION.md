@@ -1,5 +1,15 @@
 # Next action — 2026-10-03
 
+## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
+
+Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
+Supersedes part of #170.
+All 15 unit tests (`tests/unit/pilot-metrics.test.ts`) and 9 integration tests (`tests/integration/pilot-metrics.test.ts`) pass.
+E2E: not needed — internal read-only ops CLI script, no user-facing UI or endpoints.
+Harness next: push branch `ai/316` and obtain CI and review confirmation.
+
+## Issue #204 — harness handoff (2026-10-15)
+
 ## Issue #300 — fix failing check `gate` (supersedes part of #268, 2026-10-19)
 
 Split from PR #268 (parent #199). PR #268 failed `gate` because it was based on `ai/199-p2` containing 11 `e2e-army/*.e2e.ts` files (exceeding the 8-file cap) and unmerged feature commits.
@@ -7,8 +17,6 @@ On clean branch `ai/300` off default branch `main`, `AI_QUESTIONS.md` has been r
 Added regression unit test `tests/unit/stale-questions-guard.test.ts` (8/8 pass) ensuring stale #196 blocker notes, #179 references, and conflicting dependency statements are rejected.
 Local checks: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest run tests/unit/stale-questions-guard.test.ts` (8 passed, 0 failed).
 The harness next: push `ai/300`, verify `gate` CI, and automerge with body "Supersedes part of #268".
-
-## Issue #204 — harness handoff (2026-10-15)
 
 The product fix is already on main (`83a80114`); carry the new unit/concurrency/migration-fixture regressions on #207.
 After push, obtain the production-stack feature gate, CI and reviewer confirmation before automerge; then close #139.
@@ -146,3 +154,7 @@ PR #280. `src/engine/execute.ts` (`data.csv` build) now takes the header from al
 The jsonb→json run input fix (migration 0027) is already on main at `39364b5d` and is not part of this PR.
 The harness must read the `feat:fl-csv-data-node` e2e-army result on the pushed head: it could not run locally
 (sandbox blocks port binding). See [evidence](artifacts/phase-4/issue-251/EVIDENCE.md).
+
+## Issue #297 — guard AI_QUESTIONS.md against stray audit deliverables (2026-10-19)
+
+PR branch `ai/297` supersedes part of #271. Resolves reviewer finding where the Issue #250 CI PR audit deliverable was incorrectly placed into root `AI_QUESTIONS.md`. The QA checklist audit deliverable is properly housed under `docs/evidence/250/qa-checklist-audit.md`, and unit regression test `tests/unit/questions-deliverable-guard.test.ts` guards `AI_QUESTIONS.md` from containing stray audit deliverables or checklist tables. Harness next: CI and reviewer confirmation. E2E: not needed — internal documentation and test guard chore.
