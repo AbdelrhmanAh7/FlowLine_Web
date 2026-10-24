@@ -51,7 +51,7 @@ const _mizanoCustomerSchema = z.object({
 });
 type MizanoCustomer = z.infer<typeof _mizanoCustomerSchema>;
 
-const decimalString = z
+export const decimalString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, "must be a decimal string with up to 2 decimal places");
 
