@@ -182,23 +182,25 @@ describe("API error messages", () => {
 });
 
 describe("template localization consistency and RTL typography (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)", () => {
-  it("src/i18n/messages/ar.json:364: deal-won-mizano-quote title uses left-pointing arrow (←, \\u2190) and strictly no right-pointing arrow (→, \\u2192) for RTL layout consistency (findings 08bddb2f551f, 9c8bf91e0489, #454)", () => {
+  it("src/i18n/messages/ar.json:364: deal-won-mizano-quote title uses em-dash (—) and no directional arrows for RTL layout consistency (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)", () => {
     const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string; description?: string; nodes?: Record<string, string> }> }).localTemplates;
     const item = templates?.["deal-won-mizano-quote"];
     expect(item).toBeDefined();
-    expect(item?.name).toBe("صفقة مكسوبة ← عرض سعر Mizano");
-    expect(item?.name).toContain("\u2190");
+    expect(item?.name).toBe("صفقة مكسوبة — عرض سعر Mizano");
+    expect(item?.name).toContain("\u2014");
     expect(item?.name).not.toContain("\u2192");
+    expect(item?.name).not.toContain("\u2190");
     expect(item?.name).not.toContain(" - ");
   });
 
-  it("src/i18n/messages/ar.json:365: deal-won-mizano-quote description uses left-pointing arrow (←) in RTL parenthetical and strictly no right-pointing arrow (→) (#454)", () => {
+  it("src/i18n/messages/ar.json:365: deal-won-mizano-quote description uses em-dash (—) in RTL parenthetical and no directional arrows (#454)", () => {
     const templates = (ar as unknown as { localTemplates?: Record<string, { description?: string }> }).localTemplates;
     const desc = templates?.["deal-won-mizano-quote"]?.description;
     expect(desc).toBeDefined();
-    expect(desc).toContain("(الصفقة فازت ← عرض ميزانو)");
-    expect(desc).toContain("\u2190");
+    expect(desc).toContain("(الصفقة فازت — عرض ميزانو)");
+    expect(desc).toContain("\u2014");
     expect(desc).not.toContain("\u2192");
+    expect(desc).not.toContain("\u2190");
   });
 
   it("src/i18n/messages/ar.json:369-373: deal-won-mizano-quote nodes consistently use em-dash (—) and strictly no regular hyphen (-) in Arabic labels (#454)", () => {

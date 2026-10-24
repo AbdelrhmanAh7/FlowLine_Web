@@ -97,10 +97,11 @@ describe("template step labels and names", () => {
   });
 
   it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242, #340, #454)", () => {
-    expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won → Mizano quote");
-    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("صفقة مكسوبة ← عرض سعر Mizano");
-    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toContain("←");
+    expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won — Mizano quote");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("صفقة مكسوبة — عرض سعر Mizano");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toContain("—");
     expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).not.toContain("→");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).not.toContain("←");
     expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toMatch(ARABIC);
     for (const key of ["description", "sample", "result"] as const) {
       expect(en.has(`localTemplates.deal-won-mizano-quote.${key}`)).toBe(true);
