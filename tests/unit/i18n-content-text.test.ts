@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
-import { listProviders } from "@/integrations/registry";
+import { allProviders, listProviders } from "@/integrations/registry";
 import {
   actionDescription,
   actionTitle,
@@ -96,8 +96,10 @@ describe("template step labels and names", () => {
     expect(templateName(ar, { id: "no-such-template", name: "Mine" })).toBe("Mine");
   });
 
-  it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242)", () => {
+  it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242, #340)", () => {
     expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won → Mizano quote");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("صفقة مكسوبة → عرض سعر Mizano");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).not.toContain("←");
     expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toMatch(ARABIC);
     for (const key of ["description", "sample", "result"] as const) {
       expect(en.has(`localTemplates.deal-won-mizano-quote.${key}`)).toBe(true);
@@ -111,7 +113,7 @@ describe("template step labels and names", () => {
 });
 
 describe("integration catalog text", () => {
-  for (const p of listProviders()) {
+  for (const p of allProviders()) {
     it(`${p.id}: category, description, actions and connect fields are Arabic; English is the source`, () => {
       expect(ar.has(`integrationCategory.${p.category}`), `category "${p.category}"`).toBe(true);
       expect(providerCategory(ar, p.category)).toMatch(ARABIC);
@@ -156,6 +158,31 @@ describe("integration catalog text", () => {
     expect(connectFieldLabel(ar, "github", github.connectFields![0]!)).toBe("رمز الوصول الشخصي");
     expect(providerDescription(ar, github)).toBe("قراءة طلبات الدمج والتعليق على المشكلات في مستودعات GitHub");
     expect(providerCategory(ar, "Developer tools")).toBe("أدوات المطوّرين");
+  });
+
+  it("the Mizano provider description and action descriptions are properly localized in Arabic (#365)", () => {
+    const mizano = allProviders().find((p) => p.id === "mizano")!;
+    expect(providerDescription(ar, mizano)).toBe("موصل المحاسبة Mizano");
+
+    const createCustomer = mizano.actions.find((a) => a.id === "mizano.create_customer")!;
+    const createCustomerDesc = actionDescription(ar, createCustomer);
+    expect(createCustomerDesc).toContain("الاسم");
+    expect(createCustomerDesc).toBe(
+      "ينشئ عميلاً جديدًا في Mizano بالاسم والشركة والبريد الإلكتروني ورقم الهاتف ومعرف الضريبة الاختياري."
+    );
+
+    const listOverdue = mizano.actions.find((a) => a.id === "mizano.list_overdue_invoices")!;
+    const listOverdueDesc = actionDescription(ar, listOverdue);
+    expect(listOverdueDesc.endsWith(".")).toBe(true);
+    expect(listOverdueDesc).toBe(
+      "يعرض الفواتير غير المسددة التي تجاوزت تاريخ استحقاقها في التاريخ الذي تختاره، بعملة مساحة العمل."
+    );
+
+    const createQuote = mizano.actions.find((a) => a.id === "mizano.create_draft_quote")!;
+    const createQuoteDesc = actionDescription(ar, createQuote);
+    expect(createQuoteDesc).toBe(
+      "ينشئ عرض أسعار مسودّة في Mizano مع عميل وبنود (العملة، العناصر مع الكمية وسعر الوحدة ونسبة الضريبة)."
+    );
   });
 
   it("unknown providers, actions and categories fall back to the catalog's own text", () => {
