@@ -357,7 +357,7 @@
       }
     },
     "deal-won-mizano-quote": {
-      "name": "Deal won → Mizano quote",
+      "name": "Deal won — Mizano quote",
       "description": "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
       "sample": "One won deal with customer details, currency and line items.",
       "result": "A customer and a draft quote created in Mizano once approved, and a Slack notification sent.",

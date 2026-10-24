@@ -410,6 +410,17 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and
 - Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
 - Evidence documented in `docs/evidence/434/EVIDENCE.md`.
 
+## i18n: Proper RTL arrow in Arabic template name (issue #454, split from #445) — 2026-10-24
+
+Resolved localization review findings `08bddb2f551f` (on `b89ea6c`) and `9c8bf91e0489` from PR #445 (parent #421):
+- Corrected `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:364` from `"صفقة مكسوبة → عرض سعر Mizano"` to `"صفقة مكسوبة ← عرض سعر Mizano"`, replacing the right-pointing arrow (`→`, U+2192) with the proper RTL arrow (`←`, U+2190) matching right-to-left reading flow.
+- Corrected inline parenthetical description in `src/i18n/messages/ar.json:365` from `(الصفقة فازت → عرض ميزانو)` to `(الصفقة فازت ← عرض ميزانو)`.
+- Verified template node labels in `src/i18n/messages/ar.json:369-373` consistently use em-dash (`—`, U+2014) instead of regular hyphen (`-`).
+- Extended unit test suite in `tests/unit/i18n.test.ts` (`template localization consistency and RTL typography (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)`) and `tests/unit/i18n-content-text.test.ts` to assert the canonical leftwards arrow (`←`, U+2190), absence of rightwards arrow (`→`, U+2192), node label em-dash consistency, and ensure no Arabic local template titles contain misplaced rightwards arrows (`→`).
+- Demonstrated regression test failure on base (exit code 1, 3 failed tests) and 100% green on head (exit code 0, 67/67 passed tests across i18n suites).
+- Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
+- Evidence documented in `docs/evidence/454/EVIDENCE.md`.
+
 
 
 

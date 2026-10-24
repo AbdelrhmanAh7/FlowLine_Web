@@ -181,19 +181,48 @@ describe("API error messages", () => {
   });
 });
 
-describe("local template localization consistency (#340)", () => {
-  it("deal-won-mizano-quote title uses right-pointing arrow (→) for RTL layout consistency", () => {
-    const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string }> }).localTemplates;
-    const name = templates?.["deal-won-mizano-quote"]?.name;
-    expect(name).toBe("صفقة مكسوبة → عرض سعر Mizano");
-    expect(name).not.toContain("←");
+describe("template localization consistency and RTL typography (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)", () => {
+  it("src/i18n/messages/ar.json:364: deal-won-mizano-quote title uses em-dash (—) and no directional arrows for RTL layout consistency (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string; description?: string; nodes?: Record<string, string> }> }).localTemplates;
+    const item = templates?.["deal-won-mizano-quote"];
+    expect(item).toBeDefined();
+    expect(item?.name).toBe("صفقة مكسوبة — عرض سعر Mizano");
+    expect(item?.name).toContain("\u2014");
+    expect(item?.name).not.toContain("\u2192");
+    expect(item?.name).not.toContain("\u2190");
+    expect(item?.name).not.toContain(" - ");
   });
 
-  it("no local template titles contain misplaced left-pointing arrows (←)", () => {
+  it("src/i18n/messages/ar.json:365: deal-won-mizano-quote description uses em-dash (—) in RTL parenthetical and no directional arrows (#454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { description?: string }> }).localTemplates;
+    const desc = templates?.["deal-won-mizano-quote"]?.description;
+    expect(desc).toBeDefined();
+    expect(desc).toContain("(الصفقة فازت — عرض ميزانو)");
+    expect(desc).toContain("\u2014");
+    expect(desc).not.toContain("\u2192");
+    expect(desc).not.toContain("\u2190");
+  });
+
+  it("src/i18n/messages/ar.json:369-373: deal-won-mizano-quote nodes consistently use em-dash (—) and strictly no regular hyphen (-) in Arabic labels (#454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { nodes?: Record<string, string> }> }).localTemplates;
+    const nodes = templates?.["deal-won-mizano-quote"]?.nodes ?? {};
+    expect(nodes["customer"]).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
+    expect(nodes["quote"]).toBe("Mizano — إنشاء مسودة عرض سعر");
+    expect(nodes["notify"]).toBe("Slack — عرض السعر جاهز");
+    for (const [key, label] of Object.entries(nodes)) {
+      if (["customer", "quote", "notify"].includes(key)) {
+        expect(label, `node ${key} must contain em-dash \u2014`).toContain("\u2014");
+        expect(label, `node ${key} must not contain regular hyphen \u002D`).not.toContain("\u002D");
+      }
+    }
+  });
+
+  it("no local template titles contain misplaced right-pointing arrows (→) in Arabic (#454)", () => {
     const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string }> }).localTemplates ?? {};
     for (const [id, tpl] of Object.entries(templates)) {
       if (tpl.name) {
-        expect(tpl.name, `template ${id} contains leftwards arrow ←`).not.toContain("←");
+        expect(tpl.name, `template ${id} contains rightwards arrow → in Arabic`).not.toContain("→");
+        expect(tpl.name, `template ${id} contains rightwards arrow \u2192 in Arabic`).not.toContain("\u2192");
       }
     }
   });
