@@ -19,7 +19,7 @@ Supersedes part of #368. Refs #295. Origin: [QA finding](https://github.com/Abde
 
 ## Verification report (2026-10-25)
 
-Regression base: `06760a09525d13729693c250bd2d114a86e09a98`; the production importer was unchanged when the new tests ran red. Head implementation and test blobs at verification: `354497ff932f37f04681498692c2f1cc7f199612` and `96ec534e5880cedee107b88dbc3c936144b0d61d`. The final tested commit is recorded below after committing the implementation.
+Regression base: `06760a09525d13729693c250bd2d114a86e09a98`; the production importer was unchanged when the new tests ran red. Tested implementation commit: `1a3c9ae7a6fbd583c7d4978b981060972f2606f9` (typecheck, lint and 48 related tests rerun after committing, all exit 0). Importer and unit-test blobs: `354497ff932f37f04681498692c2f1cc7f199612` and `96ec534e5880cedee107b88dbc3c936144b0d61d`. Subsequent evidence-only edits do not change the tested code.
 
 | AC | Tests / command | Exit | Observed result |
 | --- | --- | --- | --- |
