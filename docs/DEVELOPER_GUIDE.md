@@ -240,3 +240,5 @@ text, including in embedded metadata. Next.js may use its `__next_error__` envel
 the HTTP status and absence of restricted content determine the contract. Auth, session MFA and TOTP
 requirements remain enforced. Saved flow snapshots intentionally have `version: null`; publication
 numbers and draft revisions are distinct (CTO decision #204, phase-4 ledger).
+
+For focused importer checks, run `pnpm exec vitest related --run --project unit src/server/n8n-import.ts --maxWorkers=2`. Selecting `unit` avoids initializing integration/nightly database setup without the test environment. Importer node types must use a `package.node` namespace; scoped community packages are accepted as unsupported placeholders. The localized invalid-upload screenshot check is `pnpm exec playwright test e2e/n8n-import.spec.ts --project=chromium --workers=1` (requires the isolated test stack).

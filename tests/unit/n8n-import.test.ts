@@ -82,15 +82,15 @@ describe("n8nToFlow", () => {
 
   it("replaces non-alphanumeric chars in unsupported node token", () => {
     const { graph } = n8nToFlow({
-      nodes: [{ name: "Special", type: "custom.plugin-v2@alpha", position: [0, 0], parameters: {} }],
+      nodes: [{ name: "Special", type: "@scope/custom-plugin.node_v2", position: [0, 0], parameters: {} }],
       connections: {},
     });
     const placeholder = graph.nodes[0];
-    expect((placeholder.data.config as { expression: string }).expression).toBe('"REPLACE_WITH_CUSTOM_PLUGIN_V2_ALPHA"');
+    expect((placeholder.data.config as { expression: string }).expression).toBe('"REPLACE_WITH__SCOPE_CUSTOM_PLUGIN_NODE_V2"');
   });
 
   it("truncates unsupported node type in label to 40 chars", () => {
-    const longType = "a".repeat(50);
+    const longType = "a".repeat(50) + ".node";
     const { graph } = n8nToFlow({
       nodes: [{ name: "Long", type: longType, position: [0, 0], parameters: {} }],
       connections: {},
@@ -104,6 +104,15 @@ describe("n8nToFlow", () => {
       expect(() => n8nToFlow(bad)).toThrowError(HttpError);
     }
   });
+
+  it.each(["foo", ".webhook", "n8n-nodes-base.", "n8n-nodes-base.web hook"])(
+    "AC1: rejects a node type without a valid package.node namespace: %s",
+    (type) => {
+      expect(() => n8nToFlow({ nodes: [{ name: "Invalid", type }] })).toThrowError(
+        expect.objectContaining({ status: 400, code: "INVALID_N8N_JSON" }),
+      );
+    },
+  );
 
   it("turns httpRequest node with n8n expressions in URL into a placeholder", () => {
     const withExpr = {

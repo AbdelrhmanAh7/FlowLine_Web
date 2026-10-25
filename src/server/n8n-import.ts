@@ -11,7 +11,7 @@ const workflowSchema = z.object({
     .array(
       z.object({
         name: z.string().min(1).max(120),
-        type: z.string().min(1).max(120),
+        type: z.string().min(1).max(120).regex(/^[@\w./-]+\.\w+$/),
         position: z.tuple([z.number(), z.number()]).optional(),
         parameters: z.record(z.string(), z.unknown()).optional(),
       }),
