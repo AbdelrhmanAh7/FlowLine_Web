@@ -37,6 +37,9 @@ describe("GITHUB_WORKFLOW.md gate verification procedures (issue #460)", () => {
   it("documents the full-tier verification command", () => {
     expect(workflow).toContain("Full-tier verification");
     expect(workflow).toContain("tier=full");
+    expect(workflow).toContain("--event workflow_dispatch");
+    expect(workflow).toContain("headSha");
+    expect(workflow).toContain("displayTitle");
   });
 
   it("states what to do when gate is red", () => {

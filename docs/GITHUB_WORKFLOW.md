@@ -54,9 +54,9 @@ Before merging any PR — especially PRs #360, #330, #308 which gate on specific
 
 4. **Full-tier verification** (only after a manual `workflow_dispatch` with `tier=full`):
    ```bash
-   gh run list --workflow gate.yml --branch <BRANCH_NAME> --limit 1 --json databaseId,conclusion,headBranch,createdAt,url --jq '.[0] | select(.conclusion=="success")'
+   gh run list --workflow gate.yml --branch <BRANCH_NAME> --event workflow_dispatch --limit 1 --json databaseId,conclusion,headBranch,headSha,createdAt,url,displayTitle --jq '.[0] | select(.conclusion=="success" and (.displayTitle | contains("full"))) | {databaseId, conclusion, headBranch, headSha, createdAt, url}'
    ```
-   Returns the run object only when the full tier passed.
+   Returns the run object only when a full-tier workflow_dispatch run passed. The `headSha` ties the run to the PR head; `displayTitle` contains the tier input.
 
 If any `gate` check is red, do **not** merge. Read the job summary (click the `gate` check → the combiner step) to see which leg failed (`changes`, `checks`, `chromium`, `firefox`, `webkit`). Fix the underlying failure, push, wait for the new run, and re-verify.
 
