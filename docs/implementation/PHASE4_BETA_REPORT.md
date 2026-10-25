@@ -410,6 +410,8 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and
 - Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
 - Evidence documented in `docs/evidence/434/EVIDENCE.md`.
 
+## Follow-up from #271: review findings outside its scope (issue #292) — 2026-10-21
 
-
-
+Resolved audit requirements for issue #292 (follow-up review findings moved from #271 by the review-loop breaker).
+Guarded `src/integrations/providers/mizano.ts` input validation (rejecting non-matching money and quantity inputs, non-finite numbers, and values with >2 decimals without rounding, covering "1.005", 0.001, "abc", " 5 ", "1e3", NaN, Infinity) with unit tests in `tests/unit/mizano-inputs.test.ts` (13/13 passing) and contract tests in `tests/contract/mizano.test.ts` (57/57 passing).
+Reconciled and documented the status, fixing PRs/commits, and resolution rationale for all out-of-scope review findings originating from PRs #291, #210, #263, #170, #184, #267 in `docs/evidence/292/EVIDENCE.md`.
