@@ -157,6 +157,28 @@ function createWorkflowFixture(name: string, content: string): { dir: string; fi
   return { dir, file };
 }
 
+for (const locale of ["en", "ar"] as const) {
+  test(`@issue-378 AC2: non-workflow JSON upload shows a localized error (${locale})`,
+    { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
+    async ({ app, agent, screen, browser }) => {
+      await app.open(`/${locale}`);
+      await agent.act(locale === "ar" ? "افتح صفحة مسارات العمل من التنقل" : "open the Flows page from the navigation");
+      await agent.act(locale === "ar" ? "انقر على استيراد من n8n" : "click Import from n8n");
+      const fixture = createWorkflowFixture("378-notworkflow", '{"foo":"bar"}');
+      try {
+        await screen.getByLabel(locale === "ar" ? "ملف مسار عمل n8n" : "n8n workflow file").setInputFiles(fixture.file);
+        await agent.assert(locale === "ar" ? "تظهر رسالة خطأ بأن JSON ليس مسار عمل n8n" : "an error says this JSON is not an n8n workflow");
+        await expect(screen.getByRole("alert").first()).toHaveText(locale === "ar"
+          ? "هذا JSON صالح لكنه ليس مسار عمل n8n. الصق ملف مسار العمل كاملًا المُصدَّر من n8n."
+          : "This is valid JSON but not an n8n workflow. Paste the whole workflow file exported from n8n.");
+        expect(await browser.evaluate(() => document.documentElement.dir)).toBe(locale === "ar" ? "rtl" : "ltr");
+      } finally {
+        rmSync(fixture.dir, { recursive: true, force: true });
+      }
+    },
+  );
+}
+
 test(
   "@issue-295 AC1: importing an n8n workflow creates an editable flow with a placeholder for the unsupported node",
   { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
