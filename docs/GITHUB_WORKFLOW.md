@@ -30,6 +30,38 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 5. Stacked PRs merge top-down after their base.
 6. Draft PRs are never merged, folded into another PR or carried by fast-forwarding their base branch (that makes GitHub mark the draft "merged" without its own review; this happened once with #34, see its exception record). Mark the draft ready so CodeRabbit reviews it, then merge it explicitly, or close it with a recorded reason.
 
+### Verifying the `gate` check (AC1)
+
+Before merging any PR — especially PRs #360, #330, #308 which gate on specific features — verify the `gate` check is green with one of these commands:
+
+1. **Quick status** (shows all required checks including `gate` and `docs`):
+   ```bash
+   gh pr checks <PR_NUMBER> --required
+   ```
+   Exit code 0 with `gate` showing `✓` (or `PASS` in the summary) means the check passed.
+
+2. **Detailed rollup** (programmatic, includes conclusion and started/finished timestamps):
+   ```bash
+   gh pr view <PR_NUMBER> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.name=="gate") | {name, conclusion, startedAt, completedAt}'
+   ```
+   Expect `"conclusion": "SUCCESS"`.
+
+3. **Find the matching Actions run** (useful when the check name is ambiguous or you need the run URL):
+   ```bash
+   gh run list --workflow gate.yml --branch <BRANCH_NAME> --limit 5 --json databaseId,conclusion,headBranch,createdAt,url
+   ```
+   Pick the run for your branch/HEAD; `conclusion` must be `success`.
+
+4. **Full-tier verification** (only after a manual `workflow_dispatch` with `tier=full`):
+   ```bash
+   gh run list --workflow gate.yml --branch <BRANCH_NAME> --limit 1 --json databaseId,conclusion,headBranch,createdAt,url --jq '.[0] | select(.conclusion=="success")'
+   ```
+   Returns the run object only when the full tier passed.
+
+If any `gate` check is red, do **not** merge. Read the job summary (click the `gate` check → the combiner step) to see which leg failed (`changes`, `checks`, `chromium`, `firefox`, `webkit`). Fix the underlying failure, push, wait for the new run, and re-verify.
+
+**Verified PRs:** #360 (unverified), #330 (unverified), #308 (unverified). Update the status and date when you confirm a green `gate` on each.
+
 ## Exception records
 
 The constitution in `AGENTS.md` allows an exception only with a written reason recorded before or at the moment of the action, in the commit message **and** on the PR or issue. Use this shape:
