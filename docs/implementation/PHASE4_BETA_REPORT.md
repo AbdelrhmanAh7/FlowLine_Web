@@ -415,3 +415,7 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and
 Resolved audit requirements for issue #292 (follow-up review findings moved from #271 by the review-loop breaker).
 Guarded `src/integrations/providers/mizano.ts` input validation (rejecting non-matching money and quantity inputs, non-finite numbers, and values with >2 decimals without rounding, covering "1.005", 0.001, "abc", " 5 ", "1e3", NaN, Infinity) with unit tests in `tests/unit/mizano-inputs.test.ts` (13/13 passing) and contract tests in `tests/contract/mizano.test.ts` (57/57 passing).
 Reconciled and documented the status, fixing PRs/commits, and resolution rationale for all out-of-scope review findings originating from PRs #291, #210, #263, #170, #184, #267 in `docs/evidence/292/EVIDENCE.md`.
+
+## Workflow verification correction — issue #460 — 2026-10-25
+
+Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.
