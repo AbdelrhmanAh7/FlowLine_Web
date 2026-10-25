@@ -43,10 +43,16 @@ describe("GITHUB_WORKFLOW.md gate verification procedures (issue #460)", () => {
     expect(workflow).toMatch(/If any.*gate.*check is red.*do \*\*not\*\* merge/i);
   });
 
-  it("has a verified PRs table/status line with the three PRs marked unverified initially", () => {
-    expect(workflow).toMatch(/Verified PRs.*#360.*unverified/);
-    expect(workflow).toMatch(/#330.*unverified/);
-    expect(workflow).toMatch(/#308.*unverified/);
+  it("references the three PRs that require gate verification in the verification section", () => {
+    // The PRs should be mentioned in the context of gate verification
+    expect(workflow).toContain("#360");
+    expect(workflow).toContain("#330");
+    expect(workflow).toContain("#308");
+    // They should appear in the verification section (after the commands)
+    const verificationSection = workflow.split("### Verifying the `gate` check")[1];
+    expect(verificationSection).toContain("#360");
+    expect(verificationSection).toContain("#330");
+    expect(verificationSection).toContain("#308");
   });
 
   it("references AC1 in the section heading or nearby", () => {

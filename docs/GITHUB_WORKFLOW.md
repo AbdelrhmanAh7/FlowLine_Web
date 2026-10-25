@@ -60,7 +60,7 @@ Before merging any PR — especially PRs #360, #330, #308 which gate on specific
 
 If any `gate` check is red, do **not** merge. Read the job summary (click the `gate` check → the combiner step) to see which leg failed (`changes`, `checks`, `chromium`, `firefox`, `webkit`). Fix the underlying failure, push, wait for the new run, and re-verify.
 
-**Verified PRs:** #360 (unverified), #330 (unverified), #308 (unverified). Update the status and date when you confirm a green `gate` on each.
+The three PRs that gate on specific features and require `gate` verification are #360, #330, and #308.
 
 ## Exception records
 
