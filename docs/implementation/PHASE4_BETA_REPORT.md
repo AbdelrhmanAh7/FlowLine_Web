@@ -410,17 +410,20 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and
 - Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
 - Evidence documented in `docs/evidence/434/EVIDENCE.md`.
 
-## i18n: Proper RTL arrow in Arabic template name (issue #454, split from #445) — 2026-10-24
+## i18n: No directional arrow in Arabic template name (issue #454, split from #445) — 2026-10-24
 
-Resolved localization review findings `08bddb2f551f` (on `b89ea6c`) and `9c8bf91e0489` from PR #445 (parent #421):
-- Corrected `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:364` from `"صفقة مكسوبة → عرض سعر Mizano"` to `"صفقة مكسوبة ← عرض سعر Mizano"`, replacing the right-pointing arrow (`→`, U+2192) with the proper RTL arrow (`←`, U+2190) matching right-to-left reading flow.
-- Corrected inline parenthetical description in `src/i18n/messages/ar.json:365` from `(الصفقة فازت → عرض ميزانو)` to `(الصفقة فازت ← عرض ميزانو)`.
-- Verified template node labels in `src/i18n/messages/ar.json:369-373` consistently use em-dash (`—`, U+2014) instead of regular hyphen (`-`).
-- Extended unit test suite in `tests/unit/i18n.test.ts` (`template localization consistency and RTL typography (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)`) and `tests/unit/i18n-content-text.test.ts` to assert the canonical leftwards arrow (`←`, U+2190), absence of rightwards arrow (`→`, U+2192), node label em-dash consistency, and ensure no Arabic local template titles contain misplaced rightwards arrows (`→`).
-- Demonstrated regression test failure on base (exit code 1, 3 failed tests) and 100% green on head (exit code 0, 67/67 passed tests across i18n suites).
-- Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
-- Evidence documented in `docs/evidence/454/EVIDENCE.md`.
+Resolved localization review findings `08bddb2f551f` and `9c8bf91e0489` from PR #445 (parent #421):
+- `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:364` is now `"صفقة مكسوبة — عرض سعر Mizano"`: the right-pointing arrow (`→`, U+2192) is replaced by an em-dash (`—`, U+2014), which has no direction and reads correctly in RTL. The description (`ar.json:365`) got the same change.
+- Node labels (`ar.json:369-373`) use the em-dash, not a hyphen. `Mizano` and `Slack` stay in Latin script as brand names.
+- Regression tests: `tests/unit/i18n.test.ts` (template localization consistency and RTL typography) and `tests/unit/i18n-content-text.test.ts` assert the em-dash and no `→`/`←` in the Arabic template strings.
+- Evidence: `docs/evidence/454/EVIDENCE.md`.
 
+## Follow-up from #271: review findings outside its scope (issue #292) — 2026-10-21
 
+Resolved audit requirements for issue #292 (follow-up review findings moved from #271 by the review-loop breaker).
+Guarded `src/integrations/providers/mizano.ts` input validation (rejecting non-matching money and quantity inputs, non-finite numbers, and values with >2 decimals without rounding, covering "1.005", 0.001, "abc", " 5 ", "1e3", NaN, Infinity) with unit tests in `tests/unit/mizano-inputs.test.ts` (13/13 passing) and contract tests in `tests/contract/mizano.test.ts` (57/57 passing).
+Reconciled and documented the status, fixing PRs/commits, and resolution rationale for all out-of-scope review findings originating from PRs #291, #210, #263, #170, #184, #267 in `docs/evidence/292/EVIDENCE.md`.
 
+## Workflow verification correction — issue #460 — 2026-10-25
 
+Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.

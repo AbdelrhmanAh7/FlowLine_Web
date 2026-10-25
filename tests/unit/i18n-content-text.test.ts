@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
-import { allProviders, listProviders } from "@/integrations/registry";
+import { listProviders } from "@/integrations/registry";
 import {
   actionDescription,
   actionTitle,
@@ -115,7 +115,7 @@ describe("template step labels and names", () => {
 });
 
 describe("integration catalog text", () => {
-  for (const p of allProviders()) {
+  for (const p of listProviders()) {
     it(`${p.id}: category, description, actions and connect fields are Arabic; English is the source`, () => {
       expect(ar.has(`integrationCategory.${p.category}`), `category "${p.category}"`).toBe(true);
       expect(providerCategory(ar, p.category)).toMatch(ARABIC);
@@ -163,7 +163,7 @@ describe("integration catalog text", () => {
   });
 
   it("the Mizano provider description and action descriptions are properly localized in Arabic (#365)", () => {
-    const mizano = allProviders().find((p) => p.id === "mizano")!;
+    const mizano = listProviders().find((p) => p.id === "mizano")!;
     expect(providerDescription(ar, mizano)).toBe("موصل المحاسبة Mizano");
 
     const createCustomer = mizano.actions.find((a) => a.id === "mizano.create_customer")!;
