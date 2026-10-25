@@ -26,6 +26,8 @@ describe("GITHUB_WORKFLOW.md gate verification procedures (issue #460)", () => {
   it("documents the Actions run lookup command (gh run list --workflow gate.yml)", () => {
     expect(workflow).toContain("gh run list --workflow gate.yml");
     expect(workflow).toContain("--branch <BRANCH_NAME>");
+    // The lookup must output headSha so the reader can match the run to the PR head.
+    expect(workflow).toContain("--limit 5 --json databaseId,conclusion,headBranch,headSha,createdAt,url");
   });
 
   it("documents the full-tier verification command", () => {
@@ -46,8 +48,12 @@ describe("GITHUB_WORKFLOW.md gate verification procedures (issue #460)", () => {
 
   it("checks the workflow assumptions used by full-tier verification", () => {
     const gate = read(".github/workflows/gate.yml");
-    expect(gate).toMatch(/firefox:[\s\S]*?inputs.tier == 'full'/);
-    expect(gate).toMatch(/webkit:[\s\S]*?inputs.tier == 'full'/);
+    for (const job of ["firefox", "webkit"]) {
+      // Scope the match to this job's block (up to the next two-space-indented job key).
+      const block = gate.match(new RegExp(`\\n  ${job}:\\n([\\s\\S]*?)(?=\\n  [A-Za-z0-9_-]+:\\n|$)`))?.[1];
+      expect(block, `${job} job in gate.yml`).toBeDefined();
+      expect(block).toContain("inputs.tier == 'full'");
+    }
     expect(workflow).toContain("headRefOid");
   });
 });

@@ -48,9 +48,10 @@ Before merging any PR, verify the `gate` check is green with one of these comman
 
 3. **Find the matching Actions run** (useful when the check name is ambiguous or you need the run URL):
    ```bash
-   gh run list --workflow gate.yml --branch <BRANCH_NAME> --limit 5 --json databaseId,conclusion,headBranch,createdAt,url
+   gh run list --workflow gate.yml --branch <BRANCH_NAME> --limit 5 --json databaseId,conclusion,headBranch,headSha,createdAt,url
+   gh pr view <PR_NUMBER> --json headRefOid
    ```
-   Pick the run for your branch/HEAD; `conclusion` must be `success`.
+   Pick the run whose `headSha` equals the PR's current `headRefOid` (an older run for the same branch does not verify the current HEAD); `conclusion` must be `success`.
 
 4. **Full-tier verification** (only after a manual `workflow_dispatch` with `tier=full`):
    ```bash
