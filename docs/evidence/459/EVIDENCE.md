@@ -6,6 +6,12 @@
 **Supersedes part of:** #458
 **Refs:** #449
 
+## Important Context
+
+- **Main branch status:** The `docs/GITHUB_WORKFLOW.md` file on `main` (commit `4a7c5e26`) **contains** the "## Merging into main" section (lines 22–31). PR #458 attempted to remove it but was not merged to main.
+- **This PR is a guard test** — it does not modify the documentation. It adds a permanent test that will fail if the critical section is ever removed in the future.
+- **Filename note:** The issue title references `GITHUBWORKFLOW.md` (no underscore), but the actual file in the repo is `GITHUB_WORKFLOW.md` (with underscore). The test and evidence use the correct filename.
+
 ## Acceptance Criteria Verification
 
 | AC | Description | Command | Exit Code | Result |
@@ -17,7 +23,7 @@
 
 ## Regression Proof
 
-A modified version of `docs/GITHUB_WORKFLOW.md` with lines 22–31 (the "Merging into main" section) removed was tested against the same test suite:
+A modified version of `docs/GITHUB_WORKFLOW.md` with lines 22–31 (the "Merging into main" section) removed was tested against the same test suite to prove the guard catches the regression:
 
 | AC | Command | Exit Code | Result |
 |----|---------|-----------|--------|
