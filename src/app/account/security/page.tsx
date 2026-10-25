@@ -32,7 +32,7 @@ export default async function Page() {
           </StatusBadge>
         </div>
         <div>
-          <Link href="/" className="text-start text-sm text-muted underline">
+          <Link href="/app"className="text-start text-sm text-muted underline">
             {t("account.security.back")}
           </Link>
         </div>

@@ -75,3 +75,9 @@ Captured and confirmed locally on Chromium:
 Re-run in this session on the committed branch (all exit 0): `pnpm exec vitest run tests/unit/account-security-page.test.ts tests/unit/gate-groups.test.ts tests/unit/i18n.test.ts --maxWorkers=2` (3 files, 45 tests passed), `pnpm lint`, `pnpm typecheck`.
 
 Not re-run in this pass: the Playwright spec `e2e/account-security.spec.ts`, the red/green mutation and the screenshots above. They come from the earlier attempt's own runs. The screenshots are not committed (raw output stays out of the repo), and the Playwright result is not independently re-verified here. The e2e-army tests run on the hub verify job and the full gate runs on CI.
+
+## Review follow-up (2026-10-25)
+
+- Back link on `/account/security` now targets `/app` (the signed-in workspace entry) instead of the landing page `/`.
+- `BETA_USER_GUIDE.md` Arabic section ٧ now documents Account → Security, matching the English summary.
+- Checks run: `vitest run tests/unit/account-security-page.test.ts tests/unit/gate-groups.test.ts` (20 passed), `eslint` on the page (clean), `pnpm typecheck` (clean). Playwright and e2e-army were not re-run locally; they run in CI.
