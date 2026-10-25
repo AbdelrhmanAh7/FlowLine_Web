@@ -13,12 +13,6 @@ describe("GITHUB_WORKFLOW.md gate verification procedures (issue #460)", () => {
     expect(workflow).toContain("### Verifying the `gate` check");
   });
 
-  it("lists the three PR numbers that require gate verification", () => {
-    for (const pr of ["#360", "#330", "#308"]) {
-      expect(workflow).toContain(pr);
-    }
-  });
-
   it("documents the quick status command (gh pr checks --required)", () => {
     expect(workflow).toContain("gh pr checks <PR_NUMBER> --required");
   });
@@ -39,26 +33,21 @@ describe("GITHUB_WORKFLOW.md gate verification procedures (issue #460)", () => {
     expect(workflow).toContain("tier=full");
     expect(workflow).toContain("--event workflow_dispatch");
     expect(workflow).toContain("headSha");
-    expect(workflow).toContain("displayTitle");
+    expect(workflow).not.toContain("displayTitle");
+    expect(workflow).toContain("gh run view <RUN_ID> --json headSha,event,conclusion,url,jobs");
+    expect(workflow).toContain("firefox");
+    expect(workflow).toContain("webkit");
+    expect(workflow).toContain("Do not treat empty output as success");
   });
 
   it("states what to do when gate is red", () => {
     expect(workflow).toMatch(/If any.*gate.*check is red.*do \*\*not\*\* merge/i);
   });
 
-  it("references the three PRs that require gate verification in the verification section", () => {
-    // The PRs should be mentioned in the context of gate verification
-    expect(workflow).toContain("#360");
-    expect(workflow).toContain("#330");
-    expect(workflow).toContain("#308");
-    // They should appear in the verification section (after the commands)
-    const verificationSection = workflow.split("### Verifying the `gate` check")[1];
-    expect(verificationSection).toContain("#360");
-    expect(verificationSection).toContain("#330");
-    expect(verificationSection).toContain("#308");
-  });
-
-  it("references AC1 in the section heading or nearby", () => {
-    expect(workflow).toContain("AC1");
+  it("checks the workflow assumptions used by full-tier verification", () => {
+    const gate = read(".github/workflows/gate.yml");
+    expect(gate).toMatch(/firefox:[\s\S]*?inputs.tier == 'full'/);
+    expect(gate).toMatch(/webkit:[\s\S]*?inputs.tier == 'full'/);
+    expect(workflow).toContain("headRefOid");
   });
 });

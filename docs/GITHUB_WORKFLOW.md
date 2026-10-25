@@ -30,9 +30,9 @@ The **main protection** ruleset enforces: a PR, the `gate` and `docs` checks pas
 5. Stacked PRs merge top-down after their base.
 6. Draft PRs are never merged, folded into another PR or carried by fast-forwarding their base branch (that makes GitHub mark the draft "merged" without its own review; this happened once with #34, see its exception record). Mark the draft ready so CodeRabbit reviews it, then merge it explicitly, or close it with a recorded reason.
 
-### Verifying the `gate` check (AC1)
+### Verifying the `gate` check
 
-Before merging any PR — especially PRs #360, #330, #308 which gate on specific features — verify the `gate` check is green with one of these commands:
+Before merging any PR, verify the `gate` check is green with one of these commands:
 
 1. **Quick status** (shows all required checks including `gate` and `docs`):
    ```bash
@@ -44,7 +44,7 @@ Before merging any PR — especially PRs #360, #330, #308 which gate on specific
    ```bash
    gh pr view <PR_NUMBER> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.name=="gate") | {name, conclusion, startedAt, completedAt}'
    ```
-   Expect `"conclusion": "SUCCESS"`.
+   Expect `"conclusion": "SUCCESS"`. Do not treat empty output as success; missing, queued, pending, skipped or unsuccessful checks are not verified.
 
 3. **Find the matching Actions run** (useful when the check name is ambiguous or you need the run URL):
    ```bash
@@ -54,13 +54,13 @@ Before merging any PR — especially PRs #360, #330, #308 which gate on specific
 
 4. **Full-tier verification** (only after a manual `workflow_dispatch` with `tier=full`):
    ```bash
-   gh run list --workflow gate.yml --branch <BRANCH_NAME> --event workflow_dispatch --limit 1 --json databaseId,conclusion,headBranch,headSha,createdAt,url,displayTitle --jq '.[0] | select(.conclusion=="success" and (.displayTitle | contains("full"))) | {databaseId, conclusion, headBranch, headSha, createdAt, url}'
+   gh run list --workflow gate.yml --branch <BRANCH_NAME> --event workflow_dispatch --limit 20 --json databaseId,conclusion,headBranch,headSha,createdAt,url
+   gh pr view <PR_NUMBER> --json headRefOid
+   gh run view <RUN_ID> --json headSha,event,conclusion,url,jobs
    ```
-   Returns the run object only when a full-tier workflow_dispatch run passed. The `headSha` ties the run to the PR head; `displayTitle` contains the tier input.
+   Select a run ID whose `headSha` equals the current PR `headRefOid`; paginate with `gh api` or use the dispatch run URL if it is outside the list. Require `event=workflow_dispatch`, `conclusion=success`, and completed successful `firefox` and `webkit` jobs. In `.github/workflows/gate.yml`, both browser jobs run only when `inputs.tier == 'full'`; a fast run skips them. A successful run with skipped browser jobs is not full-tier evidence. Record the run URL and SHA, and recheck the PR head before merging.
 
 If any `gate` check is red, do **not** merge. Read the job summary (click the `gate` check → the combiner step) to see which leg failed (`changes`, `checks`, `chromium`, `firefox`, `webkit`). Fix the underlying failure, push, wait for the new run, and re-verify.
-
-The three PRs that gate on specific features and require `gate` verification are #360, #330, and #308.
 
 ## Exception records
 

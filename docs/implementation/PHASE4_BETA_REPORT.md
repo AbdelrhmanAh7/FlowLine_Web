@@ -413,3 +413,7 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and
 
 
 
+
+## Workflow verification correction — issue #460 — 2026-10-25
+
+Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.
