@@ -69,3 +69,9 @@ Captured and confirmed locally on Chromium:
 | `pnpm typecheck` (`tsc --noEmit`) | 0 | clean, 0 errors |
 | `pnpm eslint src/app/account/security/page.tsx src/components/shell/app-shell.tsx src/i18n/messages/en.json src/i18n/messages/ar.json scripts/gate-groups.mjs tests/unit/gate-groups.test.ts tests/unit/account-security-page.test.ts e2e/account-security.spec.ts` | 0 | clean, 0 errors |
 | `PLAYWRIGHT_BROWSERS_PATH=/Users/abdelrahmanahmed/Library/Caches/ms-playwright nice -n 10 pnpm test:e2e e2e/account-security.spec.ts --project=chromium --workers=1` | 0 | 3 passed in 18.1s |
+
+## Re-verification on `ai/319` (2026-10-25, final pass)
+
+Re-run in this session on the committed branch (all exit 0): `pnpm exec vitest run tests/unit/account-security-page.test.ts tests/unit/gate-groups.test.ts tests/unit/i18n.test.ts --maxWorkers=2` (3 files, 45 tests passed), `pnpm lint`, `pnpm typecheck`.
+
+Not re-run in this pass: the Playwright spec `e2e/account-security.spec.ts`, the red/green mutation and the screenshots above. They come from the earlier attempt's own runs. The screenshots are not committed (raw output stays out of the repo), and the Playwright result is not independently re-verified here. The e2e-army tests run on the hub verify job and the full gate runs on CI.
