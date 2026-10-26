@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser, requireWorkspaceBySlug } from "@/server/access";
-import { getUserSettings, listWorkspaces } from "@/server/workspaces";
+import { listWorkspaces } from "@/server/workspaces";
 import { AppShell } from "@/components/shell/app-shell";
 import { betaSupport } from "@/server/beta";
 import { companyBuilderEnabled } from "@/server/company-builder/gate";
@@ -12,16 +12,7 @@ export default async function WorkspaceLayout({ children, params }: { children: 
   const user = await getCurrentUser();
   const { slug } = await params;
   if (!user) redirect(`/sign-in`);
-  let row = await requireWorkspaceBySlug(user, slug);
-  if (!row) {
-    const raw = decodeURIComponent(slug).trim().toLowerCase();
-    if (raw === "{slug}" || raw === "[slug]" || raw === ":slug" || raw === "slug" || raw === "{wid}" || raw === "[wid]") {
-      const [settings, workspaces] = await Promise.all([getUserSettings(user.id), listWorkspaces(user)]);
-      if (workspaces.length === 0) redirect("/onboarding");
-      const ws = workspaces.find((w) => w.id === settings?.lastWorkspaceId) ?? workspaces[0]!;
-      row = await requireWorkspaceBySlug(user, ws.slug);
-    }
-  }
+  const row = await requireWorkspaceBySlug(user, slug);
   if (!row) notFound();
   const workspaces = await listWorkspaces(user);
   return (

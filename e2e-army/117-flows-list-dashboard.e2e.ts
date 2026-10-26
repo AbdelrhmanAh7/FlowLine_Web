@@ -340,14 +340,5 @@ test(
   },
 );
 
-test(
-  "@issue-295 AC9: navigating to /w/{slug}/flows resolves to the user workspace flows page without 404",
-  { tags: ["feat:fl-flows-list", "feat:fl-flows-api"], session: "fl-user" },
-  async ({ app, agent, screen }) => {
-    await app.open("/w/%7Bslug%7D/flows");
-    await agent.assert("the flows page loads without a 404 error and shows the Flows heading or import button");
-    await expect(screen.getByText("We couldn't find that page")).not.toBeVisible();
-    await expect(screen.getByRole("button", { name: "Import from n8n" })).toBeVisible();
-  },
-);
+
 
