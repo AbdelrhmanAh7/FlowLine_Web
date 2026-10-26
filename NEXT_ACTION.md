@@ -1,5 +1,15 @@
 # Next action — 2026-10-03
 
+## Issue #435 — node-config.tsx machine text dir="ltr" RTL fix (2026-10-27)
+
+Added explicit `dir="ltr"` to machine-text code and span elements (`className="data"`) in `src/components/builder/node-config.tsx` (lines 108, 236, 562, 563) so code references, cron previews, and field names display left-to-right in Arabic/RTL contexts.
+Supersedes part of #383. Closes #435.
+Unit regression tests: `tests/unit/node-config-rtl.test.ts` (2/2 passing).
+E2E test: `e2e-army/85-sign-in-and-core-flow.e2e.ts` tagged `feat:fl-builder`.
+Evidence: `docs/evidence/435/EVIDENCE.md`.
+Pre-push quality gates verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `pnpm check:evidence` (exit 0).
+Harness next: push branch `ai/435` and obtain CI and reviewer confirmation.
+
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
