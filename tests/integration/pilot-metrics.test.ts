@@ -522,7 +522,7 @@ describe("pilot-metrics", () => {
     expect(metrics.publishedFlowWithin3Days).toBe(2);
   });
 
-  it("counts accepted webhook runs, scheduled runs and decided workflow approvals in range", async () => {
+  it("AC2: counts accepted webhook runs, scheduled runs and decided workflow approvals in range", async () => {
     const metrics = await collectPilotMetrics(db, TEST_FROM, TEST_TO);
 
     expect(metrics.webhookRuns).toBe(2);
@@ -531,7 +531,7 @@ describe("pilot-metrics", () => {
     expect(metrics.approvals).toBe(2);
   });
 
-  it("counts a webhook trigger_ref that produced two runs as one duplicate (and 0 otherwise)", async () => {
+  it("AC1: counts a webhook trigger_ref that produced two runs as one duplicate (and 0 otherwise)", async () => {
     const clean = await collectPilotMetrics(db, TEST_FROM, TEST_TO);
     // The seeded rejected "duplicate" webhook_event row is ignored; runs are unique per event.
     expect(clean.duplicateWebhookRuns).toBe(0);
@@ -555,7 +555,7 @@ describe("pilot-metrics", () => {
     expect(n).toBe(1); // rollback restored the index
   });
 
-  it("prints every metric as 0 or N/A on a range with no data", async () => {
+  it("AC3: prints every metric as 0 or N/A on a range with no data", async () => {
     const metrics = await collectPilotMetrics(db, new Date("1999-01-01T00:00:00Z"), new Date("1999-01-02T23:59:59.999Z"));
 
     expect(metrics).toMatchObject({
@@ -576,7 +576,7 @@ describe("pilot-metrics", () => {
     expect(markdown).toContain("| Staging uptime | N/A (measured via external /api/health probe, not stored in DB) |");
   });
 
-  it("formats metrics as a Markdown table with no connection string", async () => {
+  it("AC3: formats metrics as a Markdown table with no connection string", async () => {
     const metrics = await collectPilotMetrics(db, TEST_FROM, TEST_TO);
     const markdown = formatMetricsAsMarkdown(metrics, TEST_FROM, TEST_TO);
 
