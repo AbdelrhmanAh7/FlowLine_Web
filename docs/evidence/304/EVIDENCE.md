@@ -3,8 +3,8 @@
 Fresh restart of #197 (Account security page 2/4: enable MFA with secret, backup codes and code check, replaces #259).
 Originating Sentry issue: None (feature work from Goal demo #150, FL G1 step 4, not an error report).
 
-Tested code: branch `ai/304-p2` (head commit: `de7c4e02`).
-Runs: 2026-10-22, local macOS, Node 26.10.0, pnpm 10.32.1.
+Tested code: branch `ai/304-p2` (head commit: `ed63e09a`).
+Runs: 2026-10-27, local macOS, Node 26.10.0, pnpm 10.32.1.
 
 ## Acceptance Criteria
 
@@ -50,8 +50,8 @@ Runs: 2026-10-22, local macOS, Node 26.10.0, pnpm 10.32.1.
 | `pnpm vitest run tests/unit/e2e-army-tooling.test.ts` | 0 | 12 passed (12) |
 | `git diff origin/main..HEAD -- src/app/admin/setup/setup-flow.tsx` | 0 | Clean: 0 lines changed (untouched) |
 
-| `pnpm vitest run --project unit --maxWorkers=2` | 0 | 1838 passed, 1 skipped |
-| `pnpm vitest run --project contract --maxWorkers=2` | 0 | 541 passed |
+| `pnpm vitest run --project unit` | 0 | 1973 passed, 1 skipped |
+| `pnpm vitest run --project contract` | 0 | 548 passed |
 
 ## Regression / Mutation Verification
 
