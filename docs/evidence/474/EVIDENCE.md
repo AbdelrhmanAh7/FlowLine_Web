@@ -7,6 +7,7 @@ Refs #474. Supersedes part of #385.
 1. **AC1:** Identify the repository's `e2e:army` workflow for the three historical `@issue-301` scenarios, replacing Vitest as their verification method.
 2. **AC2:** Record AC4 as **UNVERIFIED** unless those scenarios actually run and pass; include the reason and distinguish an unrun command from exit 0.
 3. **AC3:** Record first-hand local evidence-check, lint, typecheck and focused docs-check results, including exit codes and limitations.
+4. **AC4:** Explicitly record scope: this PR only records the correction on main; `docs/evidence/301/EVIDENCE.md` is not modified here, and the review finding remains open on #385.
 
 ## Finding and scope
 
@@ -20,7 +21,7 @@ Local checks below cover that application commit plus this documentation-only ch
 
 The historical row claims PASS from `pnpm vitest related --run --passWithNoTests ...` and a reference to an e2e file. Vitest does not execute the e2e-army scenarios. That command and exit code cannot establish AC4.
 
-`git ls-tree origin/main docs/evidence/301/EVIDENCE.md` returned no entry (exit 0). The source document is absent from main: this issue records the correction here without importing the parent branch or recreating its document. The original row still needs updating on #385 before that document lands.
+`git ls-tree origin/main docs/evidence/301/EVIDENCE.md` returned no entry (exit 0). The source document `docs/evidence/301/EVIDENCE.md` is absent from main (it exists only on branch `ai/301` for PR #385). Per repository rules forbidding cross-issue path collisions and creating foreign evidence files on main, this PR only records the standalone correction and verification report here; `docs/evidence/301/EVIDENCE.md` is not modified here, and the review finding remains open on #385 until updated directly on that branch.
 
 ## Corrected historical AC4 entry
 
@@ -51,6 +52,7 @@ nice -n 10 pnpm e2e:army e2e-army/147-mizano-create-customer-and-quote.e2e.ts --
 | AC3 | `pnpm lint` | Completed with no lint diagnostics | 0 |
 | AC3 | `pnpm typecheck` | Completed with no TypeScript errors | 0 |
 | AC3 | `nice -n 10 pnpm exec vitest run tests/unit/docs-check-script.test.ts --maxWorkers=2` | 1 file passed; 95 tests passed, 0 failed | 0 |
+| AC4 | Inspect `docs/evidence/474/EVIDENCE.md` and `docs/implementation/PHASE4_BETA_REPORT.md` | Explicitly records scope: PR only records correction; 301 evidence unchanged here and finding remains open on #385 | N/A (inspection) |
 
 Changed covering tests: none (docs-only exemption). The existing docs-check suite was run; it does not verify historical product behavior. No product regression test or base-fail/head-pass evidence is claimed: the offending document is absent on base. UI screenshots and RTL/LTR execution are inapplicable to this docs-only change; historical UI verification remains unverified. Full suite/build were not run locally under the owner load rule.
 

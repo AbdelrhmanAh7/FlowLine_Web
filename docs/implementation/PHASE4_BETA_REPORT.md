@@ -444,4 +444,4 @@ Resolved CodeRabbit review finding `5d6aad501027` from PR #329 (parent #228) con
 
 ## Historical e2e evidence correction — issue #474 — 2026-10-26
 
-The AC4 e2e claim from #385/#301 is **unverified**: its Vitest command did not run e2e-army, and the historical `@issue-301` scenarios are absent from main. [Corrected evidence and local verification](../evidence/474/EVIDENCE.md) specify the repository workflow and remaining verification. The source evidence file is absent from main; its row must also be corrected on #385 before landing. No product behavior changed.
+The AC4 e2e claim from #385/#301 is **unverified**: its Vitest command did not run e2e-army, and the historical `@issue-301` scenarios are absent from main. [Corrected evidence and local verification](../evidence/474/EVIDENCE.md) specify the repository workflow and remaining verification. This PR only records the standalone correction on main; `docs/evidence/301/EVIDENCE.md` is not modified here and that review finding remains open on PR #385. No product behavior changed.
