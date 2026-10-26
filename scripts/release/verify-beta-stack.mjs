@@ -1,23 +1,59 @@
 #!/usr/bin/env node
 /**
- * Verifies a running private-beta stack from the OUTSIDE (P4-11): TLS, HTTP→HTTPS redirect, health, security headers,
- * correlation ids, internal routes blocked at the proxy, database not reachable, invitation-only sign-up.
- *   node scripts/release/verify-beta-stack.mjs --base https://beta.example.com [--out artifacts/phase-4/beta-infra]
- * For a LOCAL dry run against Caddy's internal CA, add --insecure-local (skips certificate validation; never for the real
- * beta domain — the real check must validate the Let's Encrypt certificate).
+ * Verifies a running private-beta stack from the OUTSIDE (P4-11): TLS, health, headers, invite sign-up.
+ * Surface area: exports pure helpers (isLoopbackTarget, resolveTlsPolicy, buildVerifyArgs) for testing without CLI execution.
+ * Local CA dry run: BETA_STACK_ALLOW_INSECURE=1 (loopback-only; real beta domain validates Let's Encrypt cert).
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import tls from "node:tls";
+import { pathToFileURL } from "node:url";
 
+// Pure helper functions exported for unit testing; script execution is guarded by import.meta.url check.
+export function isLoopbackTarget(u) {
+  try {
+    const raw = String(u ?? "").trim();
+    const h = new URL(raw === "::1" || raw.startsWith("::1:") ? "https://[::1]" : raw.includes("://") ? raw : `https://${raw}`).hostname.replace(/^\[|\]$/g, "").toLowerCase();
+    return h === "localhost" || h === "127.0.0.1" || h === "::1";
+  } catch { return false; }
+}
+
+export function resolveTlsPolicy(env = process.env, targetUrl = "https://localhost") {
+  const allow = Boolean((env?.BETA_STACK_ALLOW_INSECURE === "1" || env?.BETA_STACK_ALLOW_INSECURE === 1) && isLoopbackTarget(targetUrl));
+  return allow ? { rejectUnauthorized: false, allowInsecure: true, env: { NODE_TLS_REJECT_UNAUTHORIZED: "0" } } : { rejectUnauthorized: true, allowInsecure: false, env: {} };
+}
+
+export function buildVerifyArgs(env = process.env, targetUrl = "https://localhost", { out } = {}) {
+  const target = targetUrl.includes("://") ? targetUrl : `https://${targetUrl}`;
+  new URL(target);
+  const base = target.replace(/\/+$/, "");
+  const args = ["--base", base];
+  const o = out || env?.VERIFY_OUT || env?.OUT;
+  if (o) args.push("--out", String(o).trim());
+  if ((env?.BETA_STACK_ALLOW_INSECURE === "1" || env?.BETA_STACK_ALLOW_INSECURE === 1) && isLoopbackTarget(base)) {
+    args.push("--insecure-local");
+  }
+  return args;
+}
+
+// Entrypoint isolation: CLI execution only runs when directly invoked as main process.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
 const arg = (k, d) => {
   const i = process.argv.indexOf(`--${k}`);
   return i > 0 ? process.argv[i + 1] : d;
 };
 const BASE = arg("base", "https://localhost").replace(/\/+$/, "");
 const OUT = arg("out", "artifacts/phase-4/beta-infra");
-const insecure = process.argv.includes("--insecure-local");
-if (insecure) process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+const reqInsecure = process.argv.includes("--insecure-local") || process.env.BETA_STACK_ALLOW_INSECURE === "1";
+if (reqInsecure && !isLoopbackTarget(BASE)) {
+  console.error("Refusing to disable certificate validation: target is not a local loopback host (127.0.0.1, ::1, localhost)");
+  process.exit(1);
+}
+const envForPolicy = reqInsecure ? { ...process.env, BETA_STACK_ALLOW_INSECURE: "1" } : process.env;
+const tlsPolicy = resolveTlsPolicy(envForPolicy, BASE);
+const insecure = !tlsPolicy.rejectUnauthorized;
+// CodeQL [js/disabling-certificate-validation] (alert #8): Disabled only for local loopback testing against Caddy internal CA. See docs/security/codeql-triage-scripts.md
+if (insecure && tlsPolicy.env.NODE_TLS_REJECT_UNAUTHORIZED) process.env.NODE_TLS_REJECT_UNAUTHORIZED = tlsPolicy.env.NODE_TLS_REJECT_UNAUTHORIZED;
 const host = new URL(BASE).hostname;
 const checks = [];
 const check = (name, ok, detail = "") => {
@@ -93,3 +129,4 @@ const file = `${OUT}/verify-${host.replace(/[^a-z0-9.-]/gi, "_")}-${Date.now()}.
 writeFileSync(file, JSON.stringify(report, null, 2));
 console.log(report.pass ? "BETA STACK PASS" : "BETA STACK FAIL", "→", file);
 process.exitCode = report.pass ? 0 : 1;
+}

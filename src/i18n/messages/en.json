@@ -358,6 +358,21 @@
         "nurture": "Nurture"
       }
     },
+    "deal-won-mizano-quote": {
+      "name": "Deal won — Mizano quote",
+      "description": "When a deal is won, ask for approval of the customer details, then create the customer and a draft quote in Mizano and tell your team in Slack. Rejecting the approval ends the run before anything is sent to Mizano.",
+      "sample": "One won deal with customer details, currency and line items.",
+      "result": "A customer and a draft quote created in Mizano once approved, and a Slack notification sent.",
+      "nodes": {
+        "deal": "Deal",
+        "won": "Deal won?",
+        "prepare": "Prepare customer and quote",
+        "customer": "Mizano — Create customer (needs approval)",
+        "quote": "Mizano — Create draft quote",
+        "notify": "Slack — Quote ready",
+        "skipped": "Deal not won"
+      }
+    },
     "ticket-priority": {
       "name": "Ticket Priority Router",
       "description": "Score a support ticket by keywords and route urgent ones to an escalation output.",
@@ -2321,7 +2336,8 @@
       "twoFactor": {
         "title": "Two-step verification",
         "on": "On",
-        "off": "Off"
+        "off": "Off",
+        "backupCodes": "Backup codes — shown only once, store them offline."
       }
     },
     "settings": {
@@ -3395,8 +3411,16 @@
       "back": "Back to admin",
       "discard": "Discard the unsaved edit?",
       "loadError": "Could not load the copy. Refresh and try again.",
-      "saveError": "Could not save the draft. Check the text and refresh if it changed elsewhere.",
-      "publishError": "Could not publish. Refresh and review the draft before trying again."
+      "saveError": "Could not save the draft. Check the text and try again.",
+      "publishError": "Could not publish. Review the draft and try again.",
+      "conflict": "This copy changed elsewhere since you loaded it. Review the latest version before you try again.",
+      "networkError": "The connection failed, so the change may not have gone through. Check the copy before you try again.",
+      "serverError": "The server encountered an error. Try again in a moment.",
+      "meLoadError": "Could not load your admin session. Refresh the page and try again.",
+      "reauthRequired": "Your admin session has expired. Sign out and sign in again to keep editing the copy.",
+      "rateLimited": "Too many changes in a short time. Wait a minute and try again.",
+      "dismiss": "Dismiss",
+      "refreshing": "Saving is temporarily disabled while the copy refreshes."
     },
     "title": "Platform admin",
     "subtitle": "Flowline's own service credentials. Secrets are write-only: after you save one it is never shown again — not to you, not to anyone.",
