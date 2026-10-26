@@ -1,5 +1,6 @@
 // Issue #166: the templates gallery offers the MENA "ETA Invoice Notify" starter, and using it creates an editable flow.
-// UI flow (signed-in owner, English UI). The template ships as a versioned JSON export under src/engine/templates/mena/.
+// Issue #453: the Mizano template's Arabic node label for "customer" uses em-dash (—) not regular hyphen (-).
+// UI flow (signed-in owner, English/Arabic UI). The template ships as a versioned JSON export under src/engine/templates/mena/.
 // Assertions are deterministic locators (the gallery card's testid, the "Use template" button, the flow-name input and
 // canvas node labels); no agent steps, so the test runs with or without a model.
 // The #164 n8n-import tests (below) were moved here from their own file to stay within the hub's cap of 8 top-level
@@ -219,5 +220,33 @@ test(
     expect(run.status).toBe(422);
     const body = (await run.json()) as { error?: { code?: string } };
     expect(body.error?.code).toBe("INVALID_FLOW");
+  },
+);
+test(
+  "@issue-453 AC1: the Mizano template's Arabic customer node label uses em-dash (—) not regular hyphen (-)",
+  { tags: ["feat:fl-templates", "feat:fl-i18n-rtl", "lvl:ui"] },
+  async ({ app, screen, browser }) => {
+    await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
+    try {
+      await app.open("/app");
+      await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/flows$/);
+      const slug = new URL(await browser.url()).pathname.split("/")[2]!;
+      await app.open(`/w/${slug}/templates`);
+      await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/templates$/);
+      // Verify RTL direction
+      await expect(browser.evaluate(() => document.documentElement.dir)).resolves.toBe("rtl");
+      await expect(browser.evaluate(() => document.documentElement.lang)).resolves.toBe("ar");
+      // Find the Mizano template card
+      const mizanoCard = screen.getByTestId("template-deal-won-mizano-quote");
+      await expect(mizanoCard).toBeVisible();
+      // The card should show the customer node label with em-dash
+      // Node label: "Mizano — إنشاء عميل (يحتاج موافقة)"
+      await expect(mizanoCard).toContainText("Mizano \u2014 إنشاء عميل (يحتاج موافقة)");
+      // Ensure no regular hyphen is used in the node label
+      const cardText = await mizanoCard.textContent();
+      expect(cardText).not.toContain("Mizano - إنشاء عميل");
+    } finally {
+      await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
+    }
   },
 );

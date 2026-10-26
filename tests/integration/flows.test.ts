@@ -8,6 +8,7 @@ import { createWorkspace } from "@/server/workspaces";
 import type { CurrentUser } from "@/server/access";
 import type { FlowGraph } from "@/engine/types";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
+import { DESIGN_TEMPLATES, type DesignTemplate } from "@/engine/design-templates";
 import { closeDb, expectHttpError, makeUser, unique } from "./helpers";
 
 afterAll(closeDb);
@@ -98,6 +99,61 @@ describe("createFlow", () => {
   it("rejects an n8n import that is not a workflow with 400 (#164)", async () => {
     const { user, ws } = await setup();
     await expectHttpError(createFlow(user, ws.id, { n8n: { foo: "bar" } }), 400, "INVALID_N8N_JSON");
+  });
+
+  it("rejects a template needing unavailable actions listing missing actions (AC1, AC2)", async () => {
+    const { user, ws } = await setup();
+    const testTemplate: DesignTemplate = {
+      id: "test-missing-action",
+      name: "Test Missing Action",
+      description: "Test template with unavailable action",
+      category: "Sales",
+      goal: "sales",
+      requires: [],
+      setup: [],
+      graph: {
+        nodes: [
+          { id: "act1", type: "integration.action", position: { x: 0, y: 0 }, data: { label: "Act 1", config: { actionId: "nonexistent.action_single" } as never } },
+        ],
+        edges: [],
+      },
+    };
+    DESIGN_TEMPLATES.push(testTemplate);
+    try {
+      const err = await expectHttpError(createFlow(user, ws.id, { templateId: "test-missing-action" }), 409, "TEMPLATE_UNAVAILABLE");
+      expect(err.message).toBe("That template needs app actions that aren't available yet: nonexistent.action_single");
+    } finally {
+      const idx = DESIGN_TEMPLATES.findIndex((t) => t.id === "test-missing-action");
+      if (idx !== -1) DESIGN_TEMPLATES.splice(idx, 1);
+    }
+  });
+
+  it("lists multiple missing actions comma-separated (AC2)", async () => {
+    const { user, ws } = await setup();
+    const testTemplateMulti: DesignTemplate = {
+      id: "test-missing-multi",
+      name: "Test Missing Multi",
+      description: "Test template with multiple unavailable actions",
+      category: "Sales",
+      goal: "sales",
+      requires: [],
+      setup: [],
+      graph: {
+        nodes: [
+          { id: "act1", type: "integration.action", position: { x: 0, y: 0 }, data: { label: "Act 1", config: { actionId: "mizano.nonexistent_quote" } as never } },
+          { id: "act2", type: "integration.action", position: { x: 100, y: 0 }, data: { label: "Act 2", config: { actionId: "slack.nonexistent_post" } as never } },
+        ],
+        edges: [],
+      },
+    };
+    DESIGN_TEMPLATES.push(testTemplateMulti);
+    try {
+      const err = await expectHttpError(createFlow(user, ws.id, { templateId: "test-missing-multi" }), 409, "TEMPLATE_UNAVAILABLE");
+      expect(err.message).toBe("That template needs app actions that aren't available yet: mizano.nonexistent_quote, slack.nonexistent_post");
+    } finally {
+      const idx = DESIGN_TEMPLATES.findIndex((t) => t.id === "test-missing-multi");
+      if (idx !== -1) DESIGN_TEMPLATES.splice(idx, 1);
+    }
   });
 });
 
