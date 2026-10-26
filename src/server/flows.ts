@@ -76,8 +76,11 @@ export async function listFlows(workspaceId: string) {
 export async function createFlow(user: CurrentUser, workspaceId: string, input: { name?: string; templateId?: string }, locale?: Locale) {
   const template = input.templateId ? [...LOCAL_TEMPLATES, ...DESIGN_TEMPLATES].find((t) => t.id === input.templateId) : undefined;
   if (input.templateId && !template) throw new HttpError(400, "UNKNOWN_TEMPLATE", "That template isn't available");
-  if (template && missingTemplateActions(template.graph, { has: (id: string) => getAction(id) !== undefined }).length > 0) {
-    throw new HttpError(409, "TEMPLATE_UNAVAILABLE", "That template needs app actions that aren't available yet");
+  if (template) {
+    const missing = missingTemplateActions(template.graph, { has: (id: string) => getAction(id) !== undefined });
+    if (missing.length > 0) {
+      throw new HttpError(409, "TEMPLATE_UNAVAILABLE", `That template needs app actions that aren't available yet: ${missing.join(", ")}`);
+    }
   }
   const localized = template ? (locale ? localizeTemplate(createTranslator(locale), template) : { name: template.name, graph: structuredClone(template.graph) }) : null;
   const name = flowNameSchema.parse(input.name ?? localized?.name ?? "Untitled flow");

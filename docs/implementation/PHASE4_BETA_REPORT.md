@@ -362,6 +362,13 @@ Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (15/15 passing) and 
 tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing).
 Regression tested against base failure. Supersedes part of #170.
 
+## Pilot metrics: duplicate runs, scheduled runs and uptime (issue #320) — 2026-10-20
+
+Resolved review findings from PR #170 (split finding f7eba2a4e9dd):
+1. **Duplicate webhook runs**: Production never creates rejected `webhook_event` rows (retries return 200/409 directly), so querying `status = 'rejected'` reported 0 and missed duplicate runs. `getDuplicateWebhookRuns` now counts duplicate `run` rows grouped by `(flow_id, trigger_ref)` where `trigger_kind = 'webhook'` and `trigger_ref IS NOT NULL`.
+2. **Scheduled runs**: Added `getScheduledRuns` querying runs where `trigger_kind = 'schedule'`, included in `PilotMetrics` and formatted in Markdown report.
+3. **Staging uptime**: Added `NOT_TRACKED_UPTIME` documenting external `/api/health` monitoring, and included staging uptime row in `formatMetricsAsMarkdown`.
+Covered by unit tests in `tests/unit/pilot-metrics.test.ts` (18/18 passing) and integration tests in `tests/integration/pilot-metrics.test.ts` (9/9 passing). Supersedes part of #170. Refs #143.
 ## i18n: Deal won → Mizano quote gallery strings (issue #242) — 2026-10-20
 
 Added `localTemplates.deal-won-mizano-quote` EN and AR entries to message catalogs (`src/i18n/messages/en.json` and `src/i18n/messages/ar.json`).
@@ -369,4 +376,68 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Blocker breaker: cigroup verify failure investigation (issue #335) — 2026-10-22
 
+Investigated `cigroup:AbdelrhmanAh7/FlowLine_Web:verify` alert across 5 cited PRs (#329, #215, #184, #139, #135).
+Proved via hub verification reports that each failed on independent branch-specific diffs and test planner
+expectations rather than a shared regression on `main`. Cited PRs have been superseded or resolved by fresh
+restarts (#376 merged at `8167bcbb`, #380 passed verify at `311ffd4`, #385 passed verify at `4d69ef1`).
+All CI workflow gates preserved with zero workflow edits (`tests/unit/ci-workflows.test.ts` 82/82 passing).
+Evidence documented in `docs/evidence/335/EVIDENCE.md`.
+
+## i18n: RTL arrow consistency in Arabic gallery template string (issue #340) — 2026-10-23
+
+Resolved non-blocking P3 localization review finding from PR #334 on `deal-won-mizano-quote`:
+- Updated `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:361` from `"صفقة مكسوبة ← عرض سعر Mizano"` to `"صفقة مكسوبة → عرض سعر Mizano"`, replacing the leftwards arrow (`←`, U+2190) with the rightwards arrow (`→`, U+2192) for Arabic RTL typographic consistency.
+- Added test coverage in `tests/unit/i18n-content-text.test.ts` and `tests/unit/i18n.test.ts` (`local template localization consistency (#340)`), asserting exact name equality and guarding against misplaced `←` arrows across all local templates.
+- Demonstrated regression failure on base state (3 failures, rc=1) and 61/61 passes on head state (rc=0).
+- Evidence documented in `docs/evidence/340/EVIDENCE.md`.
+
+## Template validation: detailed missing actions error (issue #341) — 2026-10-23
+
+Resolved review findings from PR #244:
+1. **Template validation error specificity**: In `src/server/flows.ts` (`createFlow`), when template validation detects missing app actions that are not registered in the provider registry, the error message now lists the missing action IDs explicitly (`That template needs app actions that aren't available yet: action_one, action_two`) instead of a generic opaque rejection.
+2. **Template action inspection helpers**: In `src/engine/design-templates.ts`, added `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates` helpers to inspect action requirements and filter available vs held-back design templates.
+Covered by unit tests in `tests/unit/template-actions.test.ts` (6/6 passing) and integration tests in `tests/integration/flows.test.ts` (13/13 passing). Regression demonstrated against base failure. Follow-up from #244. Evidence in `docs/evidence/341/EVIDENCE.md`.
+
+## Integrations catalog stable gate fix (issue #313, closes #252, supersedes #263) — 2026-10-23
+
+Resolved `fl-integrations` stable gate failure on main:
+1. Kept pre-GA Mizano out of `listProviders()` in `src/integrations/registry.ts` via `PRE_GA` set filter while retaining internal registration in `allProviders()`, `getProvider()` and `getAction()`.
+2. Verified `GET /api/integrations/catalog` returns exactly 12 supported providers in pinned order with `count: 12`.
+3. Added unit tests in `tests/unit/integrations-catalog.test.ts` (5/5 passing, demonstrating base failure vs head pass).
+4. Updated `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to assert 12 providers and verify Arabic RTL layout without Mizano, keeping top-level e2e-army files capped at ≤8.
+5. All 53 contract tests in `tests/contract/mizano*.test.ts` continue to pass.
+
+## i18n: Arabic typography em-dash consistency for backupCodes (issue #434, split from #383) — 2026-10-23
+
+Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and round 1 findings 9d0db94dd27d / 4357ac834349:
+- Added `account.security.twoFactor.backupCodes` to `src/i18n/messages/ar.json` using em-dash (`—`, U+2014) instead of regular hyphen (`-`): `"رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت."`.
+- Added matching English string to `src/i18n/messages/en.json`: `"Backup codes — shown only once, store them offline."`.
+- Aligned key positioning in both catalogues (`account.security` placed adjacent to `account.settings`), ensuring diff visibility during delta review rounds.
+- Added regression test suite in `tests/unit/i18n.test.ts` (`Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0db94dd27d, 4357ac834349, #434)`) asserting typography compliance across all `backupCodes` entries in both catalogues with strict Unicode character checks.
+- Demonstrated regression failure on base branch (exit 1, 2 failed tests) and green on head (exit 0, 22/22 passed tests).
+- Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
+- Evidence documented in `docs/evidence/434/EVIDENCE.md`.
+
+## i18n: No directional arrow in Arabic template name (issue #454, split from #445) — 2026-10-24
+
+Resolved localization review findings `08bddb2f551f` and `9c8bf91e0489` from PR #445 (parent #421):
+- `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:364` is now `"صفقة مكسوبة — عرض سعر Mizano"`: the right-pointing arrow (`→`, U+2192) is replaced by an em-dash (`—`, U+2014), which has no direction and reads correctly in RTL. The description (`ar.json:365`) got the same change.
+- Node labels (`ar.json:369-373`) use the em-dash, not a hyphen. `Mizano` and `Slack` stay in Latin script as brand names.
+- Regression tests: `tests/unit/i18n.test.ts` (template localization consistency and RTL typography) and `tests/unit/i18n-content-text.test.ts` assert the em-dash and no `→`/`←` in the Arabic template strings.
+- Evidence: `docs/evidence/454/EVIDENCE.md`.
+
+## Follow-up from #271: review findings outside its scope (issue #292) — 2026-10-21
+
+Resolved audit requirements for issue #292 (follow-up review findings moved from #271 by the review-loop breaker).
+Guarded `src/integrations/providers/mizano.ts` input validation (rejecting non-matching money and quantity inputs, non-finite numbers, and values with >2 decimals without rounding, covering "1.005", 0.001, "abc", " 5 ", "1e3", NaN, Infinity) with unit tests in `tests/unit/mizano-inputs.test.ts` (13/13 passing) and contract tests in `tests/contract/mizano.test.ts` (57/57 passing).
+Reconciled and documented the status, fixing PRs/commits, and resolution rationale for all out-of-scope review findings originating from PRs #291, #210, #263, #170, #184, #267 in `docs/evidence/292/EVIDENCE.md`.
+
+## Workflow verification correction — issue #460 — 2026-10-25
+
+Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.
+
+## Malformed percent-escapes answer 404 (issue #426, supersedes part of #380) — 2026-10-26
+
+`src/proxy.ts` (Next.js 16's name for middleware) answers a path or query string with an undecodable percent-escape with a 404 (bounded JSON for `/api/*`, the not-found page otherwise) instead of a framework error. Evidence: `docs/evidence/426/EVIDENCE.md`.

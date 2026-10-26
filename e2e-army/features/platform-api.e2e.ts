@@ -18,8 +18,8 @@ test("[fl-integrations.2] the catalog lists every real provider with its actions
   expect(res.status).toBe(200);
   const cat = res.json;
   const ids = (cat.providers as { id: string }[]).map((p) => p.id);
-  expect(ids).toEqual(["google_sheets", "gmail", "slack", "hubspot", "zendesk", "airtable", "snowflake", "github", "stripe", "notion", "postgres", "linear"]);
-  expect(cat.count).toBe(12);
+  expect(ids).toEqual(["google_sheets", "gmail", "slack", "hubspot", "zendesk", "airtable", "snowflake", "github", "stripe", "notion", "postgres", "linear", "mizano"]);   // mizano: #147 #148 (Mizano steps); same assertion as the hub release-train suite
+  expect(cat.count).toBe(13);
   expect(cat.actionCount).toBe((cat.providers as Json[]).reduce((n, p) => n + p.actions.length, 0));
   for (const p of cat.providers as Json[]) {
     expect(p.actions.length, p.id).toBeGreaterThan(0);
