@@ -1,8 +1,8 @@
 # Verification Report for Issue #374 (split from PR #362, parent #295)
 
-**Branch:** `ai/374`  
+**Branch:** `ai/374-p2` (PR #402)  
 **Originating Sentry issue:** None (feature enhancement / blocker finding fix split from PR #362)  
-**Tested Commit SHA:** `90f9aaa9`
+**Tested Commit SHA:** `3b2173cc` (merged with `origin/main`)  
 **Supersedes part of:** #362  
 
 ---
@@ -69,3 +69,11 @@
      4. Reloads the browser page via `await browser.reload()`.
      5. Asserts and expects that the reloaded flow editor displays the renamed step "Shape Edited".
    - **Evidence**: Covered by `e2e-army/117-flows-list-dashboard.e2e.ts` (@issue-374 AC1).
+
+2. **QA Reviewer Finding [p1] on PR #402 — Test changes supposedly not implemented**:
+   - **Finding**: "The PR only updates the Tested Commit SHA in EVIDENCE.md but doesn't implement the required test changes for 117-flows-list-dashboard.e2e.ts to verify the editable graph functionality as specified in the issue."
+   - **Resolution & Evidence (Rejected as Inaccurate)**:
+     - The QA reviewer evaluated only single commit `93745290` rather than the PR diff against base (`origin/main`).
+     - In the PR diff against `origin/main`, `e2e-army/117-flows-list-dashboard.e2e.ts` (lines 160-185) was committed on the branch in commit `df9dce46` and fully implements the AC1 scenario: clicking the Shape step to open `NodeDrawer`, renaming it to "Shape Edited", closing the drawer, verifying autosave reaches `data-status="saved"`, reloading via `browser.reload()`, and asserting the persisted step name.
+     - Confirmed by CTO approval in `qa-402.md`: "the unrated QA finding is inaccurate as e2e tests cover editable graph persistence, but merge conflicts must be resolved."
+     - Merge conflicts with `origin/main` in `src/server/flows.ts`, `tests/integration/flows.test.ts`, and `docs/implementation/PROGRESS.md` were cleanly resolved preserving both sides' intent in commit `3b2173cc`.
