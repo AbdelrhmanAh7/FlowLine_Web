@@ -1,5 +1,15 @@
 # Next action — 2026-10-03
 
+## PR #490 — review follow-ups bundle (#442, #439, #433, #437) — 2026-10-27
+
+Resolved non-blocking review follow-up findings across 4 merged PRs:
+1. #442: Added `dir="rtl"` assertion for Arabic 404 responses in `e2e-army/200-route-error-headers.e2e.ts`.
+2. #439: Used canonical un-diacritized regex assertion in `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` and updated `docs/evidence/370/EVIDENCE.md`.
+3. #433: Updated `tests/unit/template-actions.test.ts` to exercise `createFlow` directly for `TEMPLATE_UNAVAILABLE` error message formatting.
+4. #437: De-duplicated deal-won template name assertion in `tests/unit/i18n.test.ts` (kept in `tests/unit/i18n-content-text.test.ts`).
+All unit tests (152 files, 1946 passed), contract tests (26 files, 548 passed), typecheck, lint, and secrets checks pass clean.
+Harness next: push branch `ai/442` and obtain CI and review confirmation.
+
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".

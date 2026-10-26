@@ -442,3 +442,12 @@ Resolved CodeRabbit review finding `5d6aad501027` from PR #329 (parent #228) con
 - Added permanent regression guard and publish error suite in `tests/unit/admin/copy/copy-editor-publish-errors.test.ts` (7/7 passed).
 - Evidence: `docs/evidence/471/EVIDENCE.md`.
 
+## Review follow-ups bundle (PR #490, closes #442, #439, #433, #437) — 2026-10-27
+
+Resolved non-blocking review follow-ups across merged Phase 4 features:
+1. **#442**: In `e2e-army/200-route-error-headers.e2e.ts`, asserted `dir="rtl"` on Arabic 404 responses for `/admin/copy` non-admin requests.
+2. **#439**: In `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` and `docs/evidence/370/EVIDENCE.md`, normalized agent assertion to real Arabic text `"إنشاء عرض أسعار مسودّة"` without regex characters.
+3. **#433**: In `tests/unit/template-actions.test.ts`, replaced local formatter re-implementation with direct `createFlow` execution asserting `HttpError` 409 `TEMPLATE_UNAVAILABLE`.
+4. **#437**: In `tests/unit/i18n.test.ts`, removed duplicate template name string assertion retained in `tests/unit/i18n-content-text.test.ts`.
+- Evidence: `docs/evidence/442/EVIDENCE.md`.
+
