@@ -55,6 +55,5 @@ Issue #292 tracks review findings that the automated review-loop breaker moved o
 
 ## Skills Used
 - `model-effort-routing`: Antigravity Agent · Gemini 3.8 Flash · High · Review findings triage and connector validation.
-- `diagnosing-bugs` / `systematic-debugging` / `root-cause debugging`: isolated push-gate refusal to outbox vitest related pulling integration tests due to provider source modification; resolved by keeping provider source unchanged and accessing schema via registered action.
 - `test-first-engineering` / `tdd`: unit and contract tests verifying input rejection and no-rounding behavior.
 - `verification-before-completion`: verified every command with real exit codes and observed outputs.

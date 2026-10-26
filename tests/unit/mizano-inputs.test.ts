@@ -1,14 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { z } from "zod";
 import { getAction } from "@/integrations/registry";
-
-const action = getAction("mizano.create_draft_quote")?.action;
-if (!action) throw new Error("mizano.create_draft_quote not registered");
-type QuoteInputSchema = z.ZodObject<{
-  lines: z.ZodArray<z.ZodObject<{ qty: z.ZodType<string> }>>;
-}>;
-const lineSchema = (action.input as QuoteInputSchema).shape.lines.element;
-const decimalString = lineSchema.shape.qty;
+import { decimalString } from "@/integrations/providers/mizano";
 
 describe("mizano input validation (issue #292 / AC2)", () => {
   it("decimalString schema accepts non-negative decimal strings with up to 2 decimal places", () => {
