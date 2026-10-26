@@ -105,7 +105,7 @@ export function NodeConfigForm(props: FormProps) {
     case "trigger.schedule":
       return <ScheduleForm {...props} />;
     case "transform.json":
-      return <ExpressionField id={`expr-${id}`} label={t("config.transform.label")} value={s(cfg.expression)} onChange={(v) => set({ expression: v })} rows={6} hint={t.rich("config.transform.hint", { ref: <code className="data">$steps.&lt;id&gt;</code> })} />;
+      return <ExpressionField id={`expr-${id}`} label={t("config.transform.label")} value={s(cfg.expression)} onChange={(v) => set({ expression: v })} rows={6} hint={t.rich("config.transform.hint", { ref: <code className="data" dir="ltr">$steps.&lt;id&gt;</code> })} />;
     case "logic.condition":
       return <ExpressionField id={`expr-${id}`} label={t("config.condition.label")} value={s(cfg.expression)} onChange={(v) => set({ expression: v })} hint={t.rich("config.condition.hint", { trueBranch: <span className="text-success">true</span> })} />;
     case "output":
@@ -233,7 +233,7 @@ function ScheduleForm({ node, cfg, set }: FormProps) {
       />
       {preview.length > 0 && (
         <p className="text-sm text-med">
-          {t("config.schedule.next")} <span className="data text-hi">{preview.join(" · ")}</span>
+          {t("config.schedule.next")} <span className="data text-hi" dir="ltr">{preview.join(" · ")}</span>
         </p>
       )}
       <Notice tone="info">{t("config.schedule.notice")}</Notice>
@@ -559,8 +559,8 @@ function ActionForm({ node, cfg, set }: FormProps) {
             onChange={(v) => set({ inputMapping: v })}
             rows={8}
             hint={t.rich("config.action.mappingHint", {
-              fields: required.length ? <>{required.map((r) => <code key={r} className="data me-1">{r}</code>)}</> : t("config.action.none"),
-              ref: <code className="data">$steps.&lt;id&gt;</code>,
+              fields: required.length ? <>{required.map((r) => <code key={r} className="data me-1" dir="ltr">{r}</code>)}</> : t("config.action.none"),
+              ref: <code className="data" dir="ltr">$steps.&lt;id&gt;</code>,
             })}
           />
           <Button size="sm" className="self-start" onClick={() => set({ inputMapping: mappingSkeleton(action) })}>
