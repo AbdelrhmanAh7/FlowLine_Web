@@ -410,6 +410,14 @@ Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and
 - Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
 - Evidence documented in `docs/evidence/434/EVIDENCE.md`.
 
+## i18n: No directional arrow in Arabic template name (issue #454, split from #445) — 2026-10-24
+
+Resolved localization review findings `08bddb2f551f` and `9c8bf91e0489` from PR #445 (parent #421):
+- `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:364` is now `"صفقة مكسوبة — عرض سعر Mizano"`: the right-pointing arrow (`→`, U+2192) is replaced by an em-dash (`—`, U+2014), which has no direction and reads correctly in RTL. The description (`ar.json:365`) got the same change.
+- Node labels (`ar.json:369-373`) use the em-dash, not a hyphen. `Mizano` and `Slack` stay in Latin script as brand names.
+- Regression tests: `tests/unit/i18n.test.ts` (template localization consistency and RTL typography) and `tests/unit/i18n-content-text.test.ts` assert the em-dash and no `→`/`←` in the Arabic template strings.
+- Evidence: `docs/evidence/454/EVIDENCE.md`.
+
 ## Follow-up from #271: review findings outside its scope (issue #292) — 2026-10-21
 
 Resolved audit requirements for issue #292 (follow-up review findings moved from #271 by the review-loop breaker).
