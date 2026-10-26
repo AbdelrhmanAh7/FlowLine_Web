@@ -209,3 +209,21 @@ test(
   },
 );
 
+
+// #426 AC2: a malformed percent-escape in the path or query answers a clean 404, never a framework 500 (src/proxy.ts).
+test(
+  "@issue-426 AC2: a malformed percent-escape in the query or path answers 404, not 500",
+  { tags: ["feat:fl-auth-api", "lvl:api"] },
+  async ({ app }) => {
+    const api = await fetch(new URL("/api/me?q=%E0%A4%A", app.baseUrl));
+    expect(api.status).toBe(404);
+    expect(api.headers.get("cache-control")).toBe("no-store");
+    expect(await api.json()).toEqual({ error: { code: "NOT_FOUND", message: "Not found" } });
+
+    const page = await fetch(new URL("/w/acme?q=%zz", app.baseUrl));
+    expect(page.status).toBe(404);
+
+    const valid = await fetch(new URL("/api/me?q=%D8%A7", app.baseUrl));
+    expect(valid.status).toBe(401);
+  },
+);

@@ -419,3 +419,7 @@ Reconciled and documented the status, fixing PRs/commits, and resolution rationa
 ## Workflow verification correction — issue #460 — 2026-10-25
 
 Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.
+
+## Malformed percent-escapes answer 404 (issue #426, supersedes part of #380) — 2026-10-26
+
+`src/proxy.ts` (Next.js 16's name for middleware) answers a path or query string with an undecodable percent-escape with a 404 (bounded JSON for `/api/*`, the not-found page otherwise) instead of a framework error. Evidence: `docs/evidence/426/EVIDENCE.md`.
