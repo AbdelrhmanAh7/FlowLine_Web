@@ -16,7 +16,7 @@ Added two new tests to the existing E2E test file:
 
 - **Test "@issue-364 AC1"**: Sets `fl_locale=ar` cookie, verifies RTL layout, navigates to integrations page, opens Mizano integration, and asserts Arabic action titles:
   - "إنشاء عميل" (Create customer)
-  - "إنشاء عرض أسعار مسودّة" (Create draft quote)
+  - "إنشاء عرض أسعار مسودة" (Create draft quote)
   - "عرض الفواتير المتأخرة" (List overdue invoices)
   - Category: "أدوات المحاسبة" (Finance)
   - Description: "موصل المحاسبة Mizano" (Mizano accounting connector)
