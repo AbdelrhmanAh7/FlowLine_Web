@@ -3,7 +3,7 @@
 > fix: node-config.tsx: add explicit `dir="ltr"` attributes for machine-text
 > elements in Arabic/RTL contexts
 
-**Tested commit SHA**: `0fc438d8`
+**Tested commit SHA**: `492e4d6b`
 **Branch**: `ai/435`
 **Supersedes part of**: #383 (parent issue #165)
 
@@ -23,14 +23,18 @@
 **Test**: `tests/unit/node-config-rtl.test.ts` — static source scan of `node-config.tsx`
 that greps for `<code>` elements with `className` containing `data` and asserts each has `dir="ltr"`.
 
-**On base (`main`)**: 3 offenders (lines 108, 562, 563 lack `dir="ltr"`; line 387 already has it).
-**On head (`0fc438d8`)**: 0 offenders — all 4 `<code className="data">` elements have `dir="ltr"`.
+**On base (`main` @ `1eceed2b`)**: 3 offenders (lines 108, 562, 563 lack `dir="ltr"`; line 387 already has it).
+**On head (`492e4d6b`)**: 0 offenders — all 4 `<code className="data">` elements have `dir="ltr"`.
 
 ```
-pnpm test -- tests/unit/node-config-rtl.test.ts
+pnpm exec vitest run tests/unit/node-config-rtl.test.ts
 # exit code: 0
-# Test Files  153 passed (153)
-# Tests  1948 passed | 1 skipped (1949)
+# ✓ |unit| tests/unit/node-config-rtl.test.ts (2 tests)
+#   ✓ node-config.tsx RTL safety (2)
+#     ✓ every <code className="data"> has dir="ltr"
+#     ✓ every <span className="data ..."> has dir="ltr"
+# Test Files  1 passed (1)
+#      Tests  2 passed (2)
 ```
 
 ### AC2 → unit test `tests/unit/node-config-rtl.test.ts` ("every `<span className='data ...'>` has `dir='ltr'`")
@@ -38,14 +42,14 @@ pnpm test -- tests/unit/node-config-rtl.test.ts
 **Test**: same file, second `it()` block — scans for `<span>` elements with `className`
 containing `data` and asserts each has `dir="ltr"`.
 
-**On base (`main`)**: 1 offender (line 236: `<span className="data text-hi">` lacks `dir="ltr"`).
-**On head (`0fc438d8`)**: 0 offenders.
+**On base (`main` @ `1eceed2b`)**: 1 offender (line 236: `<span className="data text-hi">` lacks `dir="ltr"`).
+**On head (`492e4d6b`)**: 0 offenders.
 
 ### AC3 → regression demonstration
 
-The 4 elements fixed (diff from `1eceed2b` to `0fc438d8`):
+The 4 elements fixed (diff from `1eceed2b` to `492e4d6b`):
 
-| Line | Element | Base (`main`) | Head (`0fc438d8`) |
+| Line | Element | Base (`main`) | Head (`492e4d6b`) |
 |------|---------|---------------|-------------------|
 | 108 | `<code className="data">$steps.<id></code>` (transform hint) | ❌ no `dir` | ✅ `dir="ltr"` |
 | 236 | `<span className="data text-hi">` (cron preview) | ❌ no `dir` | ✅ `dir="ltr"` |
@@ -56,7 +60,7 @@ The regression test (`tests/unit/node-config-rtl.test.ts`) was committed first (
 before the fix (commit `0fc438d8`), following test-first methodology:
 
 - **Fails on base**: running the test against `main`'s `node-config.tsx` finds 4 offenders
-- **Passes on head**: running the test against `0fc438d8`'s `node-config.tsx` finds 0 offenders
+- **Passes on head**: running the test against `492e4d6b`'s `node-config.tsx` finds 0 offenders
 
 ### AC4 → e2e-army test `e2e-army/85-sign-in-and-core-flow.e2e.ts`
 
@@ -72,7 +76,7 @@ confirming the RTL context in which the `dir="ltr"` fix is needed.
 |-------|---------|-----------|
 | Typecheck | `pnpm typecheck` | 0 |
 | Lint | `pnpm lint` | 0 |
-| Unit tests | `pnpm test -- tests/unit/node-config-rtl.test.ts` | 0 |
+| Unit tests | `pnpm exec vitest run tests/unit/node-config-rtl.test.ts` | 0 |
 
 ## Changed Files
 
