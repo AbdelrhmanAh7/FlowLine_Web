@@ -426,3 +426,7 @@ Original #100 AC1 is implemented as the size-limited first slice: manifest-drive
 container, priority poster and deferred capability-selected playback. No production verification is claimed.
 Walkthrough/bento and the remaining acceptance criteria stay open; do not close #100/#357/#96.
 Focused evidence and limitations: [verification report](../evidence/357/EVIDENCE.md).
+
+## Malformed percent-escapes answer 404 (issue #426, supersedes part of #380) — 2026-10-26
+
+`src/proxy.ts` (Next.js 16's name for middleware) answers a path or query string with an undecodable percent-escape with a 404 (bounded JSON for `/api/*`, the not-found page otherwise) instead of a framework error. Evidence: `docs/evidence/426/EVIDENCE.md`.

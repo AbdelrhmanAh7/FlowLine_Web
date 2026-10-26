@@ -47,6 +47,7 @@ export function DemoVideo({ clip, files, poster }: { clip: ClipEntry; files: Man
     const refresh = () => { if (!visible || blocked() || document.hidden) v.pause(); else void start(); };
     const onLoad = () => { loaded = true; refresh(); };
     toggle.current = () => {
+      if (!v.isConnected) return;
       paused = !v.paused;
       try { sessionStorage.setItem("flowline-demo-paused", String(paused)); } catch { /* Private mode. */ }
       if (paused) v.pause(); else void start(true);
@@ -64,7 +65,7 @@ export function DemoVideo({ clip, files, poster }: { clip: ClipEntry; files: Man
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img data-testid="landing-demo-poster" src={poster} alt="" width={clip.width} height={clip.height} fetchPriority="high" className="absolute inset-0 size-full" />
     <video data-testid="landing-demo" ref={(v) => { video.current = v; if (v) { v.muted = true; v.setAttribute("muted", ""); } }} aria-label={t("landing.canvasAria")} muted playsInline loop preload="none" poster={poster} width={clip.width} height={clip.height} onPlaying={() => setPlaying(true)} onPause={() => setPlaying(false)} className="relative size-full">
-      <source src={fallback ? `/media/demo/${fallback.path}` : undefined} type="video/mp4" />
+      {fallback && <source src={`/media/demo/${fallback.path}`} type="video/mp4" />}
     </video>
     <Button type="button" aria-pressed={playing} onClick={() => toggle.current()} className="absolute end-2 bottom-2 min-h-11 min-w-11 rounded-lg bg-surface px-3 text-hi">{t(playing ? "landing.demo.pause" : "landing.demo.play")}</Button>
   </div>;
