@@ -43,7 +43,7 @@ test(
     await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
     await app.open("/");
     // Verify RTL layout
-    await expect(browser.evaluate(() => document.documentElement.dir)).resolves.toBe("rtl");
+    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
     await agent.act("open the workspace's Integrations page from the navigation");
     await agent.act("open the Mizano integration");
     // Verify Arabic action titles (diacritic-resilient matching for shaddah U+0651)
@@ -67,7 +67,7 @@ test(
     await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
     await app.open("/");
     // Verify LTR layout
-    await expect(browser.evaluate(() => document.documentElement.dir)).resolves.toBe("ltr");
+    expect(await browser.evaluate(() => document.documentElement.dir)).toBe("ltr");
     await agent.act("open the workspace's Integrations page from the navigation");
     await agent.act("open the Mizano integration");
     // Verify English action titles (regression check)
@@ -92,7 +92,7 @@ test(
       await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "ar" }]);
       await app.open("/");
       // Verify RTL layout
-      await expect(browser.evaluate(() => document.documentElement.dir)).resolves.toBe("rtl");
+      expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
       await agent.act("open the workspace's Integrations page from the navigation");
       await agent.act("open the Mizano integration");
       // Verify Arabic description and action listing

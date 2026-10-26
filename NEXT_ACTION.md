@@ -2,7 +2,7 @@
 
 ## Issue #217 — Type-check e2e-army/ (2026-10-20)
 
-Removed `e2e-army` from `tsconfig.json` `exclude` array. All files under `e2e-army/` typecheck cleanly with 0 errors.
+Removed `e2e-army` from `tsconfig.json` `exclude` array. All files under `e2e-army/` typecheck cleanly with 0 errors (resolved `resolves` / `toThrow` typing incompatibilities in `147-mizano-create-customer-and-quote.e2e.ts`, `166-mena-template.e2e.ts`, and `200-route-error-headers.e2e.ts`).
 Updated `docs/DEVELOPER_GUIDE.md` to state `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies and `e2e-army/` is typechecked.
 Added unit test `tests/unit/tsconfig-e2e-army-include.test.ts` (3/3 pass).
 Verified `pnpm typecheck`, `pnpm lint e2e-army tsconfig.json`, and `pnpm test tests/unit/tsconfig-e2e-army-include.test.ts tests/unit/docs-check-script.test.ts`.

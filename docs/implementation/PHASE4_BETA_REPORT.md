@@ -3,7 +3,7 @@
 
 ## Type-check e2e-army/ folder (issue #217, part of #85) — 2026-10-20
 
-Removed `e2e-army` from `tsconfig.json`'s `exclude` list so `pnpm typecheck` (`tsc --noEmit`) covers `e2e-army/**/*.ts` now that `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies. All `e2e-army` files typecheck cleanly with 0 errors. Updated `docs/DEVELOPER_GUIDE.md` to note that `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies and `e2e-army/` is type-checked. Added unit test `tests/unit/tsconfig-e2e-army-include.test.ts`.
+Removed `e2e-army` from `tsconfig.json`'s `exclude` list so `pnpm typecheck` (`tsc --noEmit`) covers `e2e-army/**/*.ts` now that `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies. All `e2e-army` files typecheck cleanly with 0 errors (including resolving matcher types in `147-mizano-create-customer-and-quote.e2e.ts`, `166-mena-template.e2e.ts`, and `200-route-error-headers.e2e.ts`). Updated `docs/DEVELOPER_GUIDE.md` to note that `e2e` (0.18.0) and `@e2e-dev/web` are devDependencies and `e2e-army/` is type-checked. Added unit test `tests/unit/tsconfig-e2e-army-include.test.ts`.
 
 
 ## Pilot E2E failure corrections — 2026-10-15

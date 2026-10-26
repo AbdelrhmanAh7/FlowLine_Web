@@ -82,9 +82,11 @@ async function expectBoundedError(res: Response, status: number, code: string, m
   const text = await res.text();
   expect(text.length).toBeLessThan(4096);
   let body: { error?: Record<string, unknown>; requestId?: unknown } = {};
-  expect(() => {
+  try {
     body = JSON.parse(text);
-  }).not.toThrow();
+  } catch {
+    expect(false, "response body must be valid JSON").toBe(true);
+  }
   expect(typeof body).toBe("object");
   expect(body).not.toBeNull();
   expect(Object.keys(body).sort()).toEqual(Object.keys(body).includes("requestId") ? ["error", "requestId"] : ["error"]);

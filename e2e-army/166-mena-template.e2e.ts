@@ -58,8 +58,8 @@ test(
       await app.open(`/w/${slug}/templates`);
       await expect(browser).toHaveURL(/\/w\/[a-z0-9-]+\/templates$/);
       // Verify RTL direction
-      await expect(browser.evaluate(() => document.documentElement.dir)).resolves.toBe("rtl");
-      await expect(browser.evaluate(() => document.documentElement.lang)).resolves.toBe("ar");
+      expect(await browser.evaluate(() => document.documentElement.dir)).toBe("rtl");
+      expect(await browser.evaluate(() => document.documentElement.lang)).toBe("ar");
       // Find the Mizano template card
       const mizanoCard = screen.getByTestId("template-deal-won-mizano-quote");
       await expect(mizanoCard).toBeVisible();
