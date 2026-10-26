@@ -180,3 +180,213 @@ describe("API error messages", () => {
     expect(apiErrorMessage(t, "weird")).toBe(ar.errors.generic);
   });
 });
+
+describe("template localization consistency and RTL typography (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)", () => {
+  it("src/i18n/messages/ar.json:364: deal-won-mizano-quote title uses em-dash (—) and no directional arrows for RTL layout consistency (findings 08bddb2f551f, 9c8bf91e0489, #340, #454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string; description?: string; nodes?: Record<string, string> }> }).localTemplates;
+    const item = templates?.["deal-won-mizano-quote"];
+    expect(item).toBeDefined();
+    expect(item?.name).toBe("صفقة مكسوبة — عرض سعر Mizano");
+    expect(item?.name).toContain("\u2014");
+    expect(item?.name).not.toContain("\u2192");
+    expect(item?.name).not.toContain("\u2190");
+    expect(item?.name).not.toContain(" - ");
+  });
+
+  it("src/i18n/messages/ar.json:365: deal-won-mizano-quote description uses em-dash (—) in RTL parenthetical and no directional arrows (#454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { description?: string }> }).localTemplates;
+    const desc = templates?.["deal-won-mizano-quote"]?.description;
+    expect(desc).toBeDefined();
+    expect(desc).toContain("(الصفقة فازت — عرض ميزانو)");
+    expect(desc).toContain("\u2014");
+    expect(desc).not.toContain("\u2192");
+    expect(desc).not.toContain("\u2190");
+  });
+
+  it("src/i18n/messages/ar.json:369-373: deal-won-mizano-quote nodes consistently use em-dash (—) and strictly no regular hyphen (-) in Arabic labels (#454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { nodes?: Record<string, string> }> }).localTemplates;
+    const nodes = templates?.["deal-won-mizano-quote"]?.nodes ?? {};
+    expect(nodes["customer"]).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
+    expect(nodes["quote"]).toBe("Mizano — إنشاء مسودة عرض سعر");
+    expect(nodes["notify"]).toBe("Slack — عرض السعر جاهز");
+    for (const [key, label] of Object.entries(nodes)) {
+      if (["customer", "quote", "notify"].includes(key)) {
+        expect(label, `node ${key} must contain em-dash \u2014`).toContain("\u2014");
+        expect(label, `node ${key} must not contain regular hyphen \u002D`).not.toContain("\u002D");
+      }
+    }
+  });
+
+  it("no local template titles contain misplaced right-pointing arrows (→) in Arabic (#454)", () => {
+    const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string }> }).localTemplates ?? {};
+    for (const [id, tpl] of Object.entries(templates)) {
+      if (tpl.name) {
+        expect(tpl.name, `template ${id} contains rightwards arrow → in Arabic`).not.toContain("→");
+        expect(tpl.name, `template ${id} contains rightwards arrow \u2192 in Arabic`).not.toContain("\u2192");
+      }
+    }
+  });
+});
+
+describe("Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0db94dd27d, 4357ac834349, #434)", () => {
+  it("src/i18n/messages/ar.json: account.security.twoFactor.backupCodes uses em-dash (—) and strictly no regular hyphen (-) (finding 9d0db94dd27d)", () => {
+    // Finding 9d0db94dd27d / 232f2a67a05a: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes
+    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const arSecurity = arAccount?.security as Record<string, unknown> | undefined;
+    const arTwoFactor = arSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const arBackupCodes = arTwoFactor?.backupCodes as string | undefined;
+
+    expect(arBackupCodes, "account.security.twoFactor.backupCodes must be defined in ar.json").toBeDefined();
+    expect(arBackupCodes).toBe("رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت.");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(arBackupCodes).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(arBackupCodes).not.toContain("-");
+    expect(arBackupCodes).not.toContain("\u2013");
+    expect(arBackupCodes).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("src/i18n/messages/en.json: account.security.twoFactor.backupCodes uses em-dash (—) and strictly no regular hyphen (-) (finding 4357ac834349)", () => {
+    // Finding 4357ac834349: Regular hyphen (-) used instead of em-dash (—) for account.security.twoFactor.backupCodes in en.json
+    const enAccount = (en as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const enSecurity = enAccount?.security as Record<string, unknown> | undefined;
+    const enTwoFactor = enSecurity?.twoFactor as Record<string, unknown> | undefined;
+    const enBackupCodes = enTwoFactor?.backupCodes as string | undefined;
+
+    expect(enBackupCodes, "account.security.twoFactor.backupCodes must be defined in en.json").toBeDefined();
+    expect(enBackupCodes).toBe("Backup codes — shown only once, store them offline.");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(enBackupCodes).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(enBackupCodes).not.toContain("-");
+    expect(enBackupCodes).not.toContain("\u2013");
+    expect(enBackupCodes).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("account.security.twoFactor.backupCodes is structurally and typographically consistent between Arabic and English", () => {
+    const arAccount = (ar as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const arVal = ((arAccount?.security as Record<string, unknown>)?.twoFactor as Record<string, unknown>)?.backupCodes as string;
+    const enAccount = (en as unknown as Record<string, unknown>).account as Record<string, unknown>;
+    const enVal = ((enAccount?.security as Record<string, unknown>)?.twoFactor as Record<string, unknown>)?.backupCodes as string;
+
+    expect(arVal).toBeDefined();
+    expect(enVal).toBeDefined();
+
+    // Both must use identical em-dash separator " — "
+    expect(arVal).toContain(" — ");
+    expect(enVal).toContain(" — ");
+
+    // Neither contains regular hyphen or hyphen-with-spaces
+    expect(arVal).not.toContain(" - ");
+    expect(enVal).not.toContain(" - ");
+    expect(arVal.includes("-")).toBe(false);
+    expect(enVal.includes("-")).toBe(false);
+  });
+
+  it("all backupCodes messages across catalogues use em-dash (—) and not regular hyphen (-)", () => {
+    expect(ar.platformAdmin.setup.backupCodes).toContain("—");
+    expect(ar.platformAdmin.setup.backupCodes).not.toContain("-");
+    expect(en.platformAdmin.setup.backupCodes).toContain("—");
+    expect(en.platformAdmin.setup.backupCodes).not.toContain("-");
+
+    function findBackupCodes(obj: unknown, path = ""): { path: string; val: string }[] {
+      if (!obj || typeof obj !== "object") return [];
+      const res: { path: string; val: string }[] = [];
+      for (const [k, v] of Object.entries(obj)) {
+        const p = path ? `${path}.${k}` : k;
+        if (k === "backupCodes" && typeof v === "string") {
+          res.push({ path: p, val: v });
+        } else if (typeof v === "object" && v !== null) {
+          res.push(...findBackupCodes(v, p));
+        }
+      }
+      return res;
+    }
+
+    const arCodes = findBackupCodes(ar);
+    const enCodes = findBackupCodes(en);
+
+    expect(arCodes.length).toBeGreaterThanOrEqual(2);
+    expect(enCodes.length).toBeGreaterThanOrEqual(2);
+
+    for (const item of arCodes) {
+      expect(item.val, `Arabic key ${item.path} must contain em-dash (—)`).toContain("\u2014");
+      expect(item.val, `Arabic key ${item.path} must not contain regular hyphen (-)`).not.toContain("-");
+      expect(item.val, `Arabic key ${item.path} must not contain en-dash (–)`).not.toContain("\u2013");
+    }
+
+    for (const item of enCodes) {
+      expect(item.val, `English key ${item.path} must contain em-dash (—)`).toContain("\u2014");
+      expect(item.val, `English key ${item.path} must not contain regular hyphen (-)`).not.toContain("-");
+      expect(item.val, `English key ${item.path} must not contain en-dash (–)`).not.toContain("\u2013");
+    }
+  });
+});
+
+describe("Mizano template Arabic em-dash consistency (#453)", () => {
+  it("src/i18n/messages/ar.json: localTemplates.deal-won-mizano-quote.nodes.customer uses em-dash (—) and strictly no regular hyphen (-)", () => {
+    // Finding from PR #445: Regular hyphen (-) used instead of em-dash (—) for Mizano template customer node label
+    const arTemplates = (ar as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const arMizano = arTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const arNodes = arMizano?.nodes as Record<string, unknown> | undefined;
+    const arCustomer = arNodes?.customer as string | undefined;
+
+    expect(arCustomer, "localTemplates.deal-won-mizano-quote.nodes.customer must be defined in ar.json").toBeDefined();
+    expect(arCustomer).toBe("Mizano — إنشاء عميل (يحتاج موافقة)");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(arCustomer).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(arCustomer).not.toContain("-");
+    expect(arCustomer).not.toContain("\u2013");
+    expect(arCustomer).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("src/i18n/messages/en.json: localTemplates.deal-won-mizano-quote.nodes.customer uses em-dash (—) and strictly no regular hyphen (-)", () => {
+    const enTemplates = (en as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const enMizano = enTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const enNodes = enMizano?.nodes as Record<string, unknown> | undefined;
+    const enCustomer = enNodes?.customer as string | undefined;
+
+    expect(enCustomer, "localTemplates.deal-won-mizano-quote.nodes.customer must be defined in en.json").toBeDefined();
+    expect(enCustomer).toBe("Mizano — Create customer (needs approval)");
+    // Strict Unicode check: em-dash (U+2014) is present
+    expect(enCustomer).toContain("\u2014");
+    // Strict prohibition: no ASCII hyphen-minus (U+002D) or en-dash (U+2013)
+    expect(enCustomer).not.toContain("-");
+    expect(enCustomer).not.toContain("\u2013");
+    expect(enCustomer).not.toMatch(/[\u002D\u2010\u2011\u2012\u2013]/);
+  });
+
+  it("all Mizano template node labels use em-dash (—) and not regular hyphen (-)", () => {
+    const arTemplates = (ar as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const arMizano = arTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const arNodes = arMizano?.nodes as Record<string, unknown> | undefined;
+    const enTemplates = (en as unknown as Record<string, unknown>).localTemplates as Record<string, unknown> | undefined;
+    const enMizano = enTemplates?.["deal-won-mizano-quote"] as Record<string, unknown> | undefined;
+    const enNodes = enMizano?.nodes as Record<string, unknown> | undefined;
+
+    if (arNodes && enNodes) {
+      for (const [key, arVal] of Object.entries(arNodes)) {
+        if (typeof arVal === "string") {
+          const enVal = enNodes[key] as string | undefined;
+          if (enVal) {
+            // Only check nodes that should have em-dash (Mizano/Slack provider prefixes)
+            const shouldHaveEmDash = arVal.includes("Mizano") || arVal.includes("Slack") || enVal.includes("Mizano") || enVal.includes("Slack");
+            if (shouldHaveEmDash) {
+              // Both must use identical em-dash separator " — "
+              expect(arVal, `Arabic node ${key} must contain em-dash (—)`).toContain("\u2014");
+              expect(enVal, `English node ${key} must contain em-dash (—)`).toContain("\u2014");
+              // Neither contains regular hyphen or hyphen-with-spaces
+              expect(arVal, `Arabic node ${key} must not contain regular hyphen (-)`).not.toContain("-");
+              expect(enVal, `English node ${key} must not contain regular hyphen (-)`).not.toContain("-");
+              expect(arVal.includes("-")).toBe(false);
+              expect(enVal.includes("-")).toBe(false);
+            }
+          }
+        }
+      }
+    }
+  });
+});
+
+
