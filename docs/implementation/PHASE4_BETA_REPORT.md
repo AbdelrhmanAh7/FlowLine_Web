@@ -442,3 +442,12 @@ Resolved CodeRabbit review finding `5d6aad501027` from PR #329 (parent #228) con
 - Added permanent regression guard and publish error suite in `tests/unit/admin/copy/copy-editor-publish-errors.test.ts` (7/7 passed).
 - Evidence: `docs/evidence/471/EVIDENCE.md`.
 
+## Builder: machine text elements dir="ltr" in node-config.tsx (issue #435, split from #383) — 2026-10-27
+
+Resolved review finding on `src/components/builder/node-config.tsx:1`:
+- Added explicit `dir="ltr"` attributes to plain `<code>` and `<span>` elements styled with `className="data"` (transform hint `$steps.<id>`, schedule cron preview, action field names, and action mapping hint) to ensure left-to-right display in Arabic/RTL contexts.
+- `Input` and `Textarea` controls continue to auto-apply `dir="ltr"` via `machineDir()` in `src/components/ui/fields.tsx`.
+- Added regression test suite in `tests/unit/node-config-rtl.test.ts` (2/2 passed) asserting that every `code` and `span` with `className="data"` in `node-config.tsx` includes `dir="ltr"`.
+- E2E coverage added to `e2e-army/85-sign-in-and-core-flow.e2e.ts` with tag `feat:fl-builder`.
+- Evidence: `docs/evidence/435/EVIDENCE.md`.
+
