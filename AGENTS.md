@@ -42,9 +42,9 @@ Before creating any file or helper, inspect the existing implementation paths:
 
 ## 3. Hard Freeze List (Enterprise Scope — Strictly Forbidden in Stage 1)
 
-AI agents must **NEVER** open new issues, start branches, or expand scope in the following areas until Stage 1 has 10 active external users:
+AI agents must **NEVER** open new issues, start branches, or expand scope in the following areas until Stage 1 has 10 active external users. **Exception:** security fixes, data-loss fixes and build-breaking changes in frozen paths are allowed with an issue and a recorded reason per Constitution art. 1; existing tests and CI for frozen paths keep running.
 
-| Frozen Area | Feature IDs | Frozen Paths (Do Not Touch unless fixing a build-breaking import) |
+| Frozen Area | Feature IDs | Frozen Paths (Do Not Touch except under the exception above) |
 | :--- | :--- | :--- |
 | **Federated MFA & ZITADEL** | `fl-zitadel-federated-mfa` | `src/server/zitadel-*.ts`, `src/server/federated-*.ts`, `src/app/api/federation/**`, `src/app/api/identity/**` |
 | **Enterprise OIDC / SSO** | `fl-sso` | `src/app/w/[slug]/settings/sso.tsx`, `src/app/api/sso/**`, `src/server/sso.ts`, `src/server/oidc.ts` |
@@ -60,7 +60,7 @@ AI agents must **NEVER** open new issues, start branches, or expand scope in the
 Work strictly in this order. Finish **Milestone 1** completely before taking tasks from **Milestone 2**.
 
 ### Milestone 1: Frictionless First-Run Journey (`#195` & Core Auth/Workspace)
-1. **Zero-Friction Sign-Up to Canvas:** Ensure a new user signing up via `/sign-up` or `/sign-in` automatically gets a default workspace created and lands on `/w/<slug>/flows` without getting stuck on beta gates, email outbox traps, or multi-step onboarding wizards.
+1. **Zero-Friction Sign-Up to Canvas:** Ensure a new user signing up via `/sign-up` or `/sign-in` automatically gets a default workspace created and lands on `/w/<slug>/flows` on first verified sign-in, without getting stuck on multi-step onboarding wizards. Invite-only gating (`FLOWLINE_BETA_MODE=invite_only`) and email verification stay as defined in the Private beta rules below.
 2. **Clean CSV & Run Input (`#103` / `#287`):** Preserve deterministic column ordering in `data.csv` and `run.input` without breaking existing migrations.
 3. **Green Main Branch (`#60`):** Keep `pnpm typecheck` and core API tests green on `main`.
 
