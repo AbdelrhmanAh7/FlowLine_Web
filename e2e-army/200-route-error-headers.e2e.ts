@@ -189,6 +189,7 @@ test(
     expect(arRes.status).toBe(404);
     const arText = await arRes.text();
     expect(arText).toContain("لم نعثر على هذه الصفحة");
+    expect(arText).toContain('dir="rtl"');
     expect(arText).not.toContain("platformAdmin.copyEditor");
     expect(arText).not.toContain("<pre>");
 

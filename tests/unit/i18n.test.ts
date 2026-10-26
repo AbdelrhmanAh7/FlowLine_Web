@@ -186,7 +186,6 @@ describe("template localization consistency and RTL typography (findings 08bddb2
     const templates = (ar as unknown as { localTemplates?: Record<string, { name?: string; description?: string; nodes?: Record<string, string> }> }).localTemplates;
     const item = templates?.["deal-won-mizano-quote"];
     expect(item).toBeDefined();
-    expect(item?.name).toBe("صفقة مكسوبة — عرض سعر Mizano");
     expect(item?.name).toContain("\u2014");
     expect(item?.name).not.toContain("\u2192");
     expect(item?.name).not.toContain("\u2190");

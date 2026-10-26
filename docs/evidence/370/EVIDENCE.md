@@ -4,7 +4,7 @@
 
 | AC | Description | Verification |
 |----|-------------|--------------|
-| AC1 | E2E test uses diacritic-resilient regex pattern for Arabic text with optional shaddah (U+0651) | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` lines 51, 54 - regex `/إنشاء عرض أسعار مسودّ?ة/` matches both مع and بدون shaddah |
+| AC1 | E2E test uses diacritic-resilient regex pattern for Arabic text with optional shaddah (U+0651) | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` line 54 - regex `/إنشاء عرض أسعار مسودّ?ة/` matches both مع and بدون shaddah |
 | AC2 | Evidence documentation uses normalized Arabic text without shaddah | `docs/evidence/364/EVIDENCE.md` line 19 - "إنشاء عرض أسعار مسودة" (canonical un-diacritized form) |
 | AC3 | RTL layout assertions preserved in E2E test | Same test - `document.documentElement.dir === "rtl"` assertion unchanged |
 
@@ -12,10 +12,10 @@
 
 ### 1. E2E Test Fix (`e2e-army/147-mizano-create-customer-and-quote.e2e.ts`)
 
-Updated the Arabic assertion for "Create draft quote" action to use a diacritic-tolerant regex pattern:
+Updated the Arabic assertions for "Create draft quote" action:
 
-- **Line 51** (agent.assert): Changed from `"إنشاء عرض أسعار مسودّة"` to `"إنشاء عرض أسعار مسودّ?ة"` (regex pattern in agent assertion)
-- **Line 54** (expect): Changed from `screen.getByText("إنشاء عرض أسعار مسودّة")` to `screen.getByText(/إنشاء عرض أسعار مسودّ?ة/)`
+- **Line 51** (agent.assert): Asserts real expected Arabic text `"إنشاء عرض أسعار مسودّة"`
+- **Line 54** (expect): Uses diacritic-tolerant regex pattern `screen.getByText(/إنشاء عرض أسعار مسودّ?ة/)`
 
 The regex `/إنشاء عرض أسعار مسودّ?ة/` matches both:
 - `إنشاء عرض أسعار مسودّة` (with shaddah U+0651 on د)
@@ -46,9 +46,10 @@ git diff docs/evidence/364/EVIDENCE.md
 ## Diff Summary
 
 ```
- e2e-army/147-mizano-create-customer-and-quote.e2e.ts | 4 ++--
- docs/evidence/364/EVIDENCE.md                        | 2 +-
- 2 files changed, 3 insertions(+), 3 deletions(-)
+ docs/evidence/364/EVIDENCE.md                      |  2 +-
+ docs/evidence/370/EVIDENCE.md                      | 67 ++++++++++++++++++++++
+ .../147-mizano-create-customer-and-quote.e2e.ts    |  6 +-
+ 3 files changed, 71 insertions(+), 4 deletions(-)
 ```
 
 ## Related Files

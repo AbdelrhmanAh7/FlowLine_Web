@@ -48,7 +48,7 @@ test(
     await agent.act("open the Mizano integration");
     // Verify Arabic action titles (diacritic-resilient matching for shaddah U+0651)
     await agent.assert("the Mizano integration lists an action named إنشاء عميل");
-    await agent.assert("the Mizano integration lists an action named إنشاء عرض أسعار مسودّ?ة");
+    await agent.assert("the Mizano integration lists an action named إنشاء عرض أسعار مسودّة");
     await agent.assert("the Mizano integration lists an action named عرض الفواتير المتأخرة");
     await expect(screen.getByText("إنشاء عميل").first()).toBeVisible();
     await expect(screen.getByText(/إنشاء عرض أسعار مسودّ?ة/).first()).toBeVisible();

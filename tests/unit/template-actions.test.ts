@@ -1,4 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/db", () => ({ db: {}, schema: {} }));
 import {
   templateActionIds,
   missingTemplateActions,
@@ -9,6 +11,9 @@ import {
 } from "@/engine/design-templates";
 import type { FlowGraph } from "@/engine/types";
 import { getAction } from "@/integrations/registry";
+import { createFlow } from "@/server/flows";
+import { HttpError } from "@/server/http";
+import type { CurrentUser } from "@/server/access";
 
 const mockGraph = (actionIds: string[]): FlowGraph => ({
   nodes: [
@@ -85,17 +90,60 @@ describe("templateActionIds and missingTemplateActions (AC4)", () => {
     ]);
   });
 
-  it("formats the missing actions validation message as specified in #341 (AC1, AC2)", () => {
-    const formatMissingActionsError = (missing: string[]) =>
-      `That template needs app actions that aren't available yet: ${missing.join(", ")}`;
+  it("formats the missing actions validation message as specified in #341 (AC1, AC2)", async () => {
+    const user: CurrentUser = { id: "user_test", email: "user@example.com", name: "User Test" };
+    const testTemplateSingle: DesignTemplate = {
+      id: "test-missing-action-single",
+      name: "Test Single",
+      description: "Test desc",
+      category: "Sales",
+      goal: "sales",
+      requires: [],
+      setup: [],
+      graph: mockGraph(["slack.post_message_unregistered"]),
+    };
+    const testTemplateMulti: DesignTemplate = {
+      id: "test-missing-action-multi",
+      name: "Test Multi",
+      description: "Test desc",
+      category: "Sales",
+      goal: "sales",
+      requires: [],
+      setup: [],
+      graph: mockGraph(["mizano.create_quote_unregistered", "slack.post_message_unregistered"]),
+    };
 
-    expect(formatMissingActionsError(["slack.post_message"])).toBe(
-      "That template needs app actions that aren't available yet: slack.post_message",
-    );
+    DESIGN_TEMPLATES.push(testTemplateSingle, testTemplateMulti);
+    try {
+      try {
+        await createFlow(user, "ws_test", { templateId: "test-missing-action-single" });
+        expect.unreachable("expected createFlow to throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(HttpError);
+        expect((err as HttpError).status).toBe(409);
+        expect((err as HttpError).code).toBe("TEMPLATE_UNAVAILABLE");
+        expect((err as HttpError).message).toBe(
+          "That template needs app actions that aren't available yet: slack.post_message_unregistered",
+        );
+      }
 
-    expect(formatMissingActionsError(["mizano.create_quote", "slack.post_message"])).toBe(
-      "That template needs app actions that aren't available yet: mizano.create_quote, slack.post_message",
-    );
+      try {
+        await createFlow(user, "ws_test", { templateId: "test-missing-action-multi" });
+        expect.unreachable("expected createFlow to throw");
+      } catch (err) {
+        expect(err).toBeInstanceOf(HttpError);
+        expect((err as HttpError).status).toBe(409);
+        expect((err as HttpError).code).toBe("TEMPLATE_UNAVAILABLE");
+        expect((err as HttpError).message).toBe(
+          "That template needs app actions that aren't available yet: mizano.create_quote_unregistered, slack.post_message_unregistered",
+        );
+      }
+    } finally {
+      const idxSingle = DESIGN_TEMPLATES.findIndex((t) => t.id === "test-missing-action-single");
+      if (idxSingle !== -1) DESIGN_TEMPLATES.splice(idxSingle, 1);
+      const idxMulti = DESIGN_TEMPLATES.findIndex((t) => t.id === "test-missing-action-multi");
+      if (idxMulti !== -1) DESIGN_TEMPLATES.splice(idxMulti, 1);
+    }
   });
 
   it("all built-in DESIGN_TEMPLATES resolve their required actions against the provider registry (AC3)", () => {
