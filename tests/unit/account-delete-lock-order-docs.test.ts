@@ -107,7 +107,7 @@ describe("@issue-408 docs, header consistency, and lock-order proof: account del
     expect(testFile).not.toMatch(/As confirmed by the CTO/i);
   });
 
-  it("AC4: lock-order conflict analysis proves pre-#65 circular wait (40P01) and head serializability without deadlock", () => {
+  it("AC4: illustrative lock-order model: pre-#65 circular wait (40P01) and user-first serialization (does not exercise production code)", () => {
     // PostgreSQL row-level lock conflict matrix (PostgreSQL docs Table 13.3)
     const conflictsWith = (holder: string, waiter: string): boolean => {
       if (holder === "FOR UPDATE") return true;
@@ -147,9 +147,11 @@ describe("@issue-408 docs, header consistency, and lock-order proof: account del
       { resource: "workspace", mode: "FOR UPDATE" },
     ];
 
-    // Both serialize on the user row first; dependency graph is acyclic
+    // Both serialize on the user row first, and their lock modes conflict, so the second waits
+    // before taking any workspace lock; no circular wait is possible in this model
     expect(ssoLocks[0]!.resource).toBe("user");
     expect(headDeletionLocks[0]!.resource).toBe("user");
+    expect(conflictsWith(ssoLocks[0]!.mode, headDeletionLocks[0]!.mode)).toBe(true);
   });
 
   it("AC5: docs/evidence/408/EVIDENCE.md tracks AC for the #108 criterion deviation and records real commit SHA", () => {
