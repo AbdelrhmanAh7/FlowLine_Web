@@ -72,3 +72,19 @@ Playwright captures the following screenshots to `artifacts/phase-4/issue-304/`:
 - `account-security-ar-rtl.png`: Arabic RTL UI with "الأمان" heading and "غير مفعّل" status badge at row end.
 - `account-security-ar-on.png`: Arabic RTL UI with active "مفعّل (نشط)" status badge.
 - `user-menu-ar-rtl.png`: Arabic workspace navigation showing the "الأمان" user menu entry.
+
+## Post-Merge Revalidation on `origin/main` (head `232e2e2d`, PR #359) — 2026-10-27
+
+Merged `origin/main` (`1eceed2b`) into HEAD at `232e2e2d`.
+Investigated CI run `40409072812` where job `chromium` was cancelled during `setup-gate` after hitting the 5-minute fast-tier timeout. Confirmed root cause was a transient runner stall during Playwright browser dependencies installation on Ubuntu 24.04 (no test failure; `Run gate (chromium)` step was skipped due to the runner timeout).
+Full local verification on merged HEAD:
+- `pnpm typecheck` (tsc --noEmit): Exit 0, clean.
+- `pnpm lint` (eslint): Exit 0, 0 errors, 0 warnings.
+- `pnpm test` (vitest run --project unit): 154 passed test files, 1973 passed tests.
+- `pnpm test:contract` (vitest run --project contract): 26 passed test files, 548 passed tests.
+- `tests/unit/account-security-page.test.ts`: 24 passed (24).
+- `tests/unit/api-error-shape.test.ts`: 3 passed (3).
+- `tests/unit/gate-groups.test.ts`: 8 passed (8).
+- `tests/unit/ci-workflows.test.ts`: 84 passed (84).
+- `pnpm check:evidence`: Exit 0, 0 local secret hits.
+- `git merge-base --is-ancestor origin/main HEAD`: Exit 0 (origin/main is ancestor of HEAD).

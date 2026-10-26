@@ -378,6 +378,7 @@ Added `/account/security` page with two-step verification enrolment (`TwoFactorC
 - In-flight request cancellation guard prevents late responses from reopening the secret.
 - Full Arabic RTL support (`messages/ar.json` and `messages/en.json` key parity).
 - Covered by unit tests (`account-security-page.test.ts`, `api-error-shape.test.ts`, `gate-groups.test.ts`), Playwright E2E (`e2e/account-security.spec.ts`), and e2e-army natural-language tests (`e2e-army/304-account-security.e2e.ts`).
+- Post-merge revalidation (2026-10-27, PR #359): origin/main (`1eceed2b`) merged into HEAD (`232e2e2d`); full static, lint, typecheck, unit, and contract suites pass cleanly. Evidence updated in `docs/evidence/304/EVIDENCE.md`.
 
 ## Blocker breaker: cigroup verify failure investigation (issue #335) — 2026-10-22
 
