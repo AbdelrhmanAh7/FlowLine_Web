@@ -100,6 +100,45 @@ Every new workspace must show 3 working, one-click templates in **Arabic (RTL)**
    - Use logical Tailwind properties (`ms-*`, `me-*`, `ps-*`, `pe-*`, `text-start`, `text-end`) instead of physical `left`/`right` utilities.
    - Keep code identifiers, URLs, JSON keys, and numbers wrapped in `<bdi dir="ltr">` or `dir="ltr"`.
 
+
+## 6. Implementation Playbook (ship any Stage 1 task on the first try)
+
+### 6.1 Setup (once per worktree)
+- `pnpm wt add <name>` (links `node_modules`) or `pnpm install --frozen-lockfile`.
+- `pnpm db:up`, then `pnpm db:migrate` (dev) and `pnpm db:migrate:test` (tests use `flowline_test`, never the dev DB).
+- Next.js 16 differs from your training data: read `node_modules/next/dist/docs/` before using a Next API.
+
+### 6.2 Where code goes (extend the paths in section 2; never start a parallel copy)
+| Change | Put it in |
+| :--- | :--- |
+| Page / UI | `src/app/w/[slug]/**` (server components; `'use client'` only where needed); shared controls in `src/components/**` |
+| API endpoint | `src/app/api/**/route.ts`, logic in `src/server/*.ts`; every data access goes through `src/server/access.ts` (non-members get 404) |
+| Node / execution | `src/engine/nodes.ts`, `validate.ts`, `execute.ts` (shared by web and worker); worker in `worker/runner.ts`, `worker/handlers.ts` |
+| AI step | `src/ai/hub/execute.ts`, `src/ai/hub/routing.ts` |
+| App action / webhook | `src/integrations/providers/**`, `src/integrations/http.ts`, `src/app/api/hooks/**` |
+| Template | `src/engine/templates.ts`, `src/engine/templates/` |
+| Schema | `src/db/**`, then `pnpm db:generate` and commit the drizzle migration |
+| Text | `src/i18n/messages/ar.json` and `en.json` with identical keys; `useT()` in client components, `await getT()` in server components |
+
+### 6.3 The loop
+1. Restate the issue's happy path in one line (who does what and sees which result).
+2. Find the nearest existing example (`grep -rn "<feature id or route>" src worker`) and copy its pattern.
+3. Write the failing test first: unit `tests/unit/<area>.test.ts`, API/DB `tests/integration/`, user flow `e2e-army/<issue>-<flow>.e2e.ts` tagged `feat:<id>`.
+4. Make the smallest change that passes. At most 300 lines and 8 files; otherwise split into sequential PRs that are each green.
+5. Run `pnpm typecheck`, `pnpm lint` and `pnpm test <file>`, then only the related integration or e2e file.
+6. Update the docs the change affects (`README.md`, `docs/<area>/`, `docs/DEVELOPER_GUIDE.md`): the `docs` check fails a code PR with no `.md` change.
+7. Commit with hooks on. The PR body has `Closes #N`, a `## Security posture` section, how to test, and the e2e test name.
+
+### 6.4 Definition of done
+- The happy path works end to end, and CI `gate` + `docs` are green.
+- P0/P1 review findings (security, data loss, broken main flow) are fixed. Every other finding gets a reply in its thread (fixed, declined with a reason, or moved to a follow-up) and the thread is resolved: the goal is working happy paths, not bug-free perfection.
+- No secrets, no frozen paths (section 3), no fake success in the UI.
+
+### 6.5 When stuck
+- A red check: read the failed log first (`gh run view <id> --log-failed`) and merge `origin/main` before debugging, since main may already have the fix.
+- Never weaken a test, timeout, assertion, lint rule or CI config to get green.
+- If the task needs product judgment, write `NEEDS-HUMAN: <reason>` in the PR and stop.
+
 > **Precedence (owner 2026-10-27):** this Stage 1 charter decides *what* to build. The Constitution and the project rules below still govern *how* work is done (reviews, checks, docs, honesty, owner-only actions); they are unchanged.
 
 ---
