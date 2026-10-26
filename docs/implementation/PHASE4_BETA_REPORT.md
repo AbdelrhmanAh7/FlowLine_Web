@@ -431,3 +431,7 @@ Corrected full-tier verification to inspect matching-SHA dispatch jobs rather th
 ## Malformed percent-escapes answer 404 (issue #426, supersedes part of #380) — 2026-10-26
 
 `src/proxy.ts` (Next.js 16's name for middleware) answers a path or query string with an undecodable percent-escape with a 404 (bounded JSON for `/api/*`, the not-found page otherwise) instead of a framework error. Evidence: `docs/evidence/426/EVIDENCE.md`.
+
+## Historical e2e evidence correction — issue #474 — 2026-10-26
+
+The AC4 e2e claim from #385/#301 is **unverified**: its Vitest command did not run e2e-army, and the historical `@issue-301` scenarios are absent from main. [Corrected evidence and local verification](../evidence/474/EVIDENCE.md) specify the repository workflow and remaining verification. The source evidence file is absent from main; its row must also be corrected on #385 before landing. No product behavior changed.
