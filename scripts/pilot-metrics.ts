@@ -169,7 +169,7 @@ async function getWebhookRuns(db: Queryable, from: Date, to: Date) {
 }
 
 /** Query 5b: Scheduled runs (runs triggered by schedule) */
-async function getScheduledRuns(db: Queryable, from: Date, to: Date) {
+export async function getScheduledRuns(db: Queryable, from: Date, to: Date) {
   const result = await db.execute(sql`
     SELECT COUNT(*)::int AS count
     FROM ${schema.run}
@@ -199,7 +199,7 @@ async function getApprovals(db: Queryable, from: Date, to: Date) {
  * per (flow, trigger_ref) group that has more than one run. The unique index run_trigger_unique
  * should make this 0 on a healthy database; a non-zero value means the dedupe guard failed.
  */
-async function getDuplicateWebhookRuns(db: Queryable, from: Date, to: Date) {
+export async function getDuplicateWebhookRuns(db: Queryable, from: Date, to: Date) {
   const result = await db.execute(sql`
     SELECT COALESCE(SUM(n - 1), 0)::int AS count
     FROM (

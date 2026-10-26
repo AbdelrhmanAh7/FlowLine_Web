@@ -3,6 +3,8 @@ import { Client } from "pg";
 
 /** Integration tests only ever touch a separate test database: flowline_test (or flowline_test_<worktree> when agents work in parallel). */
 export default async function setup() {
+  process.env.DATABASE_URL ??= "postgresql://localhost:5432/flowline_test";
+  process.env.FLOWLINE_ENV ??= "test";
   const url = process.env.DATABASE_URL ?? "";
   if (!/\/flowline_test(_[a-z0-9]+)?(\?|$)/.test(url)) {
     throw new Error(`Integration tests must run against flowline_test (got ${url.replace(/\/\/[^@]*@/, "//***@")}). Use pnpm test:integration.`);
