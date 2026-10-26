@@ -21,6 +21,12 @@ async function answerMulti(page: Page, questionId: string, labels: (string | Reg
   for (const l of labels) await q.getByRole("checkbox", { name: l }).check();
   await q.getByTestId("cb-save").click();
 }
+// Wait for the expected question before clicking: two back-to-back clicks can land on the previous question while it is still rendered.
+async function answerUnknown(page: Page, questionId: string) {
+  const q = page.getByTestId("cb-question");
+  await expect(q).toHaveAttribute("data-question", questionId);
+  await q.getByTestId("cb-dont-know").click();
+}
 async function answerText(page: Page, questionId: string, text: string) {
   const q = page.getByTestId("cb-question");
   await expect(q).toHaveAttribute("data-question", questionId);
@@ -67,8 +73,8 @@ test("company builder (first slice): outcome-first interview → plan → draft 
   await answerSingle(page, "cust_next", "We reply to the customer");
   await answerText(page, "cust_services", "office cleaning, deep cleaning");
   await answerText(page, "cust_info", "Our monthly plan price is 300 SAR.\nDelivery of supplies is free inside Riyadh.");
-  await page.getByTestId("cb-question").getByTestId("cb-dont-know").click(); // volume: I don't know yet
-  await page.getByTestId("cb-question").getByTestId("cb-dont-know").click(); // other areas: not yet
+  await answerUnknown(page, "cust_volume"); // volume: I don't know yet
+  await answerUnknown(page, "other_areas"); // other areas: not yet
   await expect(page.getByText("No more questions would change the plan.")).toBeVisible();
 
   // Review what we understood: a correction is saved as a new version.
