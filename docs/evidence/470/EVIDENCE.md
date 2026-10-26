@@ -12,13 +12,13 @@ No originating Sentry issue was supplied; this is an evidence documentation find
 
 ## Tested revision
 
-- Commit SHA: `cd7bad12fb0f816ee04b525b82e2fee0bd8b83e2`
+- Commit SHA: `85644a44b41b59353c93c8bff799436a7941a031`
 
-This is the starting revision, with the new documentation guard and this report as working-tree changes. It is not a claim that the parent MFA commands tested this revision.
+The guard, typecheck and lint were rerun on this immutable commit: all exited 0 (2 tests passed). The subsequent commit updates verification metadata only. This is not a claim that the parent MFA commands tested this revision.
 
 ## Finding disposition
 
-`docs/evidence/199/EVIDENCE.md` is absent from current `origin/main` (the starting revision above). The fetched local `origin/ai/199` at `c35484a206bfb42cfb38e1ea850cf72cee991b8f` contains the reported moving reference and duplicate entry. Its historical command outputs do not identify the tested immutable commit. Replacing that reference with a guessed SHA would invent evidence. The parent-file edit is therefore inapplicable on this branch; this report records first-hand checks instead. No parent code, screenshots or test-success claims were copied into the deliverable.
+`docs/evidence/199/EVIDENCE.md` is absent from current `origin/main` (base `cd7bad12fb0f816ee04b525b82e2fee0bd8b83e2`). The fetched local `origin/ai/199` at `c35484a206bfb42cfb38e1ea850cf72cee991b8f` contains the reported moving reference and duplicate entry. Its historical command outputs do not identify the tested immutable commit. Replacing that reference with a guessed SHA would invent evidence. The parent-file edit is therefore inapplicable on this branch; this report records first-hand checks instead. No parent code, screenshots or test-success claims were copied into the deliverable.
 
 The manager's proposed global scan would also reject unrelated historical reports, including #313's short SHA. The guard is scoped to this issue to keep the change minimal. It reads Markdown as data and never executes findings, paths or code from the report. Existing Vitest and Node filesystem helpers suffice; no dependency was added.
 
@@ -30,7 +30,7 @@ Command T: `nice -n 10 pnpm exec vitest run tests/unit/evidence-commit-sha.test.
 | --- | --- | --- | --- |
 | AC1, AC2 | T on base documentation with the new test only | 2 failed: report absent (ENOENT) | 1 |
 | AC1, AC2, AC3 | T with the exact parent report temporarily copied to the #470 report path | 2 failed: moving reference rejected; duplicate entry rejected | 1 |
-| AC1, AC2 | T with this report | 2 passed, 0 failed | 0 |
+| AC1, AC2 | T with this report, working tree and committed revision above | 2 passed, 0 failed in each run | 0 |
 | AC3 | `pnpm typecheck` | No type errors | 0 |
 | AC3 | `pnpm lint` | No lint errors | 0 |
 | AC3 | `git diff --check` | No whitespace errors | 0 |
