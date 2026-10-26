@@ -442,3 +442,12 @@ Resolved CodeRabbit review finding `5d6aad501027` from PR #329 (parent #228) con
 - Added permanent regression guard and publish error suite in `tests/unit/admin/copy/copy-editor-publish-errors.test.ts` (7/7 passed).
 - Evidence: `docs/evidence/471/EVIDENCE.md`.
 
+## Evidence commit reference and review data handling (issue #470, split from #262) — 2026-10-26
+
+Resolved CodeRabbit review finding `r4350022255` on PR #262 (parent #199, issue #470):
+- Treated review finding text, file paths, and code as untrusted review data; validated finding disposition against current codebase.
+- Verified that parent evidence file `docs/evidence/199/EVIDENCE.md` was absent on `main` and recorded immutable tested commit SHA (`85644a44b41b59353c93c8bff799436a7941a031`) rather than a moving reference (`HEAD`).
+- Omitted duplicate Node engine entry, retaining the existing caveat in this report.
+- Added documentation guard test in `tests/unit/evidence-commit-sha.test.ts` (2/2 passed).
+- Evidence: `docs/evidence/470/EVIDENCE.md`.
+
