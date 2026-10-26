@@ -8,6 +8,102 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+# AGENTS.md — FlowLine (`AbdelrhmanAh7/FlowLine_Web`)
+
+> **Single Source of Truth for All AI Coding Agents**  
+> This file governs **Claude Code** (`CLAUDE.md`), **OpenAI Codex** (`AGENTS.md`), **GitHub Copilot** (`.github/copilot-instructions.md`), **OpenCode**, **CodeRabbit**, and **Thoth Labs** hub engineers.  
+> **Current Stage:** Stage 1 — First Customer MVP (No Enterprise Bloat).
+
+## 1. Product Goal (Stage 1: First Paying Customer)
+
+**FlowLine** is a visual, AI-native workflow automation platform (inspired by [Gumloop](https://www.gumloop.com/)) built with **Next.js 16, React 19, Tailwind CSS 4, `@xyflow/react`, PostgreSQL, and a background worker queue**.
+
+Our **only goal in Stage 1** is to let a non-technical user:
+1. Sign in with email/password in under 60 seconds and land directly in a default workspace.
+2. Pick a ready-made template (or connect 3 nodes on the visual canvas: **Input/Trigger → AI Step → Output Action**).
+3. Click **Run**, execute against a real AI provider, and inspect the real output in under 3 minutes.
+
+If a task, issue, or pull request does not directly serve this 3-step journey, **do not build it**.
+
+## 2. What Already Exists in the Repository (Reuse, Do Not Rewrite)
+
+Before creating any file or helper, inspect the existing implementation paths:
+
+| Area | Feature ID | Existing Code Paths | Stage 1 Status |
+| :--- | :--- | :--- | :--- |
+| **Landing & Auth** | `fl-landing`, `fl-sign-in`, `fl-sign-up`, `fl-auth-api` | `src/app/page.tsx`, `src/app/(auth)/sign-in/**`, `src/app/(auth)/sign-up/**`, `src/app/api/auth/**`, `src/lib/auth.ts` | **ACTIVE (Keep simple)** |
+| **Arabic / RTL & i18n** | `fl-i18n-rtl` | `src/i18n/**`, `src/components/language-switcher.tsx`, `src/app/layout.tsx` | **ACTIVE (Core differentiator)** |
+| **Workspace Shell & Flows** | `fl-workspaces`, `fl-workspace-nav`, `fl-flows-list`, `fl-flows-api` | `src/app/w/[slug]/layout.tsx`, `src/app/w/[slug]/flows/**`, `src/app/api/flows/[fid]/route.ts`, `src/server/flows.ts` | **ACTIVE (Core MVP)** |
+| **Visual Canvas Builder** | `fl-builder`, `fl-flow-validation`, `fl-flow-publish` | `src/components/builder/**`, `src/app/w/[slug]/flows/[flowId]/**`, `src/engine/nodes.ts`, `src/engine/validate.ts` | **ACTIVE (Core MVP)** |
+| **Worker & Execution Engine** | `fl-run-execution`, `fl-engine-nodes`, `fl-csv-data-node`, `fl-files` | `worker/runner.ts`, `worker/handlers.ts`, `src/engine/execute.ts`, `src/app/api/workspaces/[wid]/files/**` | **ACTIVE (Core MVP)** |
+| **AI Steps & Routing** | `fl-ai-nodes`, `fl-ai-providers` | `src/ai/hub/execute.ts`, `src/ai/hub/routing.ts`, `src/app/w/[slug]/settings/ai-providers.tsx` | **ACTIVE (Core MVP)** |
+| **Webhooks & App Actions** | `fl-trigger-webhook`, `fl-integration-actions`, `fl-connections` | `src/app/api/hooks/**`, `src/integrations/providers/**`, `src/integrations/http.ts`, `src/server/connections.ts` | **ACTIVE (Core MVP)** |
+| **Templates & Run History** | `fl-templates`, `fl-run-history` | `src/app/w/[slug]/templates/**`, `src/engine/templates.ts`, `src/app/w/[slug]/runs/**` | **ACTIVE (Core MVP)** |
+
+## 3. Hard Freeze List (Enterprise Scope — Strictly Forbidden in Stage 1)
+
+AI agents must **NEVER** open new issues, start branches, or expand scope in the following areas until Stage 1 has 10 active external users:
+
+| Frozen Area | Feature IDs | Frozen Paths (Do Not Touch unless fixing a build-breaking import) |
+| :--- | :--- | :--- |
+| **Federated MFA & ZITADEL** | `fl-zitadel-federated-mfa` | `src/server/zitadel-*.ts`, `src/server/federated-*.ts`, `src/app/api/federation/**`, `src/app/api/identity/**` |
+| **Enterprise OIDC / SSO** | `fl-sso` | `src/app/w/[slug]/settings/sso.tsx`, `src/app/api/sso/**`, `src/server/sso.ts`, `src/server/oidc.ts` |
+| **Company Builder (Digital Team)** | `fl-company-builder` | `src/company-builder/**`, `src/components/company-builder/**`, `src/app/w/[slug]/company/**` |
+| **Platform Admin & Rewrap** | `fl-platform-admin` | `src/app/admin/**`, `src/app/api/platform/**`, `src/server/platform-*.ts`, `src/server/rewrap.ts` |
+| **Enterprise Audit Logs** | `fl-audit-log` | `src/app/w/[slug]/settings/audit-log.tsx`, `src/server/audit.ts`, `src/app/api/workspaces/[wid]/audit/**` |
+| **Custom OAuth Apps & Scoped v1 API** | `fl-oauth-apps`, `fl-public-api-v1` | `src/app/w/[slug]/settings/oauth-apps.tsx`, `src/server/oauth-apps.ts`, `src/app/api/v1/**` |
+| **Billing & Complex Entitlements** | `fl-billing-plan`, `fl-usage-limits` | `src/billing/**`, `src/app/billing/**`, `src/server/entitlements.ts`, `src/server/prices.ts` |
+| **Experimental Copilot & Agents** | `fl-copilot`, `fl-agents`, `fl-knowledge` | `src/components/builder/copilot-panel.tsx`, `src/server/copilot*.ts`, `worker/agent-runner.ts`, `src/server/knowledge*.ts` |
+
+## 4. Clear Execution Path (Ordered Milestones for All Agents)
+
+Work strictly in this order. Finish **Milestone 1** completely before taking tasks from **Milestone 2**.
+
+### Milestone 1: Frictionless First-Run Journey (`#195` & Core Auth/Workspace)
+1. **Zero-Friction Sign-Up to Canvas:** Ensure a new user signing up via `/sign-up` or `/sign-in` automatically gets a default workspace created and lands on `/w/<slug>/flows` without getting stuck on beta gates, email outbox traps, or multi-step onboarding wizards.
+2. **Clean CSV & Run Input (`#103` / `#287`):** Preserve deterministic column ordering in `data.csv` and `run.input` without breaking existing migrations.
+3. **Green Main Branch (`#60`):** Keep `pnpm typecheck` and core API tests green on `main`.
+
+### Milestone 2: 5 Bulletproof Core Nodes (Real Execution, Not Fakes)
+Ensure these 5 node types execute reliably end-to-end through `worker/runner.ts` and `src/engine/execute.ts` with clear error messages in `fl-run-history`:
+1. **Webhook / Manual Input Trigger** (`fl-trigger-webhook` & manual run input payload).
+2. **File / CSV Reader Node** (`fl-files`, `fl-csv-data-node` — reading uploaded CSV/text/PDF content).
+3. **AI Processing Node** (`fl-ai-nodes` via `src/ai/hub/execute.ts` — prompt + structured JSON/text extraction using a real configured LLM key).
+4. **HTTP Request Node** (`fl-engine-nodes` — calling any external REST webhook/API safely).
+5. **App Output Node** (`fl-integration-actions` — sending output to Google Sheets, Slack, or Telegram/Email).
+
+### Milestone 3: 3 High-Value Starter Templates (`fl-templates`)
+Every new workspace must show 3 working, one-click templates in **Arabic (RTL)** and **English (LTR)**:
+1. **تصفية وتلخيص رسائل العملاء (Lead & Support Triage):** Webhook/Text Input → AI Classify & Summarize (Arabic/English) → Slack/Telegram/Webhook Notification.
+2. **استخراج بيانات الفواتير والملفات (Document/CSV Extractor):** File/CSV Input → AI Structured Extraction → Clean CSV/Table Output.
+3. **موجز التقارير اليومي (Daily Operations Brief):** HTTP/Data Input → AI Executive Summary → Email/Webhook Delivery.
+
+### Milestone 4: Public Live Demo Readiness
+1. Verify all 3 templates run cleanly in staging (`:3110` / `:8444`) with real AI provider keys instead of test fakes.
+2. Keep RTL layout (`<html lang="ar" dir="rtl">`) clean on the Login, Flows List, Builder Canvas, Templates, and Run Inspector screens.
+
+## 5. Rules of Engagement for AI Agents (Claude, Codex, Copilot, OpenCode)
+
+1. **Small, Atomic Pull Requests:**
+   - Maximum **300 lines changed** and **8 files touched** per PR.
+   - If a task requires more than 300 lines, split it into smaller sequential PRs. Never open multi-thousand-line PRs.
+2. **Finish Before Starting (Right-to-Left Priority):**
+   - If there is an open PR in Stage 1 scope with merge conflicts or failing checks, **fix and merge that PR first** before picking up a new issue.
+   - Close or park any PR that touches Frozen Enterprise paths (Section 3).
+3. **Verification Before Commit:**
+   - Run `pnpm typecheck` and run the specific test file covering your change (`node --test <file>` or project test runner).
+   - Do not invent UI buttons or routes in E2E tests that do not exist in `src/app/**`.
+4. **Security & Secrets:**
+   - Never commit `.env` files, API keys, tokens, or real passwords into code, tests, or markdown docs.
+   - Read all secrets exclusively from environment variables at runtime.
+5. **Arabic / RTL Standards:**
+   - Use logical Tailwind properties (`ms-*`, `me-*`, `ps-*`, `pe-*`, `text-start`, `text-end`) instead of physical `left`/`right` utilities.
+   - Keep code identifiers, URLs, JSON keys, and numbers wrapped in `<bdi dir="ltr">` or `dir="ltr"`.
+
+> **Precedence (owner 2026-10-27):** this Stage 1 charter decides *what* to build. The Constitution and the project rules below still govern *how* work is done (reviews, checks, docs, honesty, owner-only actions); they are unchanged.
+
+---
+
 # Constitution (binding on every AI agent: Claude, Codex, agy/Gemini, OpenCode, Copilot, Kimi, Command Code, Ollama, subagents)
 
 Owner decision 2026-10-03. These articles override convenience, quotas and deadlines. The project rules below apply them.
