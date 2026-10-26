@@ -1,5 +1,13 @@
 # Next action — 2026-10-03
 
+## Issue #164 / PR #267 — Import an n8n workflow JSON (2026-10-27)
+
+Merged `origin/main` resolving merge conflicts in `e2e-army/166-mena-template.e2e.ts`, `src/server/flows.ts`, and `tests/integration/flows.test.ts` preserving both sides' intent.
+Updated `tests/unit/n8n-import.test.ts` main fixture to test current-version `parameters.method: "POST"` without `requestMethod`.
+All 41 unit tests pass (`tests/unit/n8n-import.test.ts`), `pnpm typecheck` clean.
+Harness next: push branch `ai/164` and obtain CI and reviewer confirmation for PR #267.
+
+
 ## Issue #316 — pilot-metrics 0.0% run success rate fix (2026-10-20)
 
 Fixed truthiness check on `metrics.runSuccessRate` in `scripts/pilot-metrics.ts:263` where 0% was formatted as "N/A" instead of "0.0%".
