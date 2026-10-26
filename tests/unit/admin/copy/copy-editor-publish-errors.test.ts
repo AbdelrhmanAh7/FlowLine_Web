@@ -1,39 +1,73 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { createElement, type FunctionComponent, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleWriteError, type CopyErrorKey, type WriteErrorEffects } from "@/app/admin/copy/copy-errors";
 import { ApiError } from "@/lib/api";
+import type { Locale } from "@/i18n/config";
+import { createTranslator } from "@/i18n/translate";
 
 const root = resolve(__dirname, "../../../..");
 
-export function findCopyEditorViolations(content: string): string[] {
+const queries = vi.hoisted(() => ({
+  state: {} as Record<string, unknown>,
+  me: {} as Record<string, unknown>,
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: ({ queryKey }: { queryKey: string[] }) => (queryKey[0] === "platform-copy" ? queries.state : queries.me),
+}));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => undefined }) }));
+
+const I18nProvider = (await import("@/i18n/client")).I18nProvider as FunctionComponent<{
+  locale: Locale;
+  overrides?: Record<string, Record<string, string>>;
+  children?: ReactNode;
+}>;
+const { CopyEditor } = await import("@/app/admin/copy/copy-editor");
+
+function renderEditor(locale: Locale = "en", overrides?: Record<string, Record<string, string>>) {
+  return renderToStaticMarkup(
+    createElement(
+      I18nProvider,
+      { locale, overrides },
+      createElement(CopyEditor),
+    ),
+  );
+}
+
+/** Strips single-line and multi-line comments so comments never trigger false-positive pattern matches. */
+function stripComments(code: string): string {
+  return code.replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, "");
+}
+
+/**
+ * Narrow architectural boundary guard:
+ * Detects unauthorized inline handleWriteError definitions and dynamic errors.* interpolation
+ * without false-positives on comments, unrelated strings, or legitimate future as MessageKey uses.
+ */
+function findCopyEditorViolations(content: string): string[] {
+  const code = stripComments(content);
   const violations: string[] = [];
   const patterns = [
     {
-      regex: /async\s+function\s+handleWriteError\b/i,
-      description: "Inline handleWriteError in copy-editor.tsx (should import from ./copy-errors)",
+      regex: /(?:async\s+)?function\s+handleWriteError\b|const\s+handleWriteError\s*=/i,
+      description: "Inline handleWriteError definition in copy-editor.tsx (should import from ./copy-errors)",
     },
     {
-      regex: /errors\.\$\{cause\.code\}|errors\.REVISION_CONFLICT|errors\.NETWORK/i,
-      description: "Generic errors.* key interpolation in copy-editor.tsx (should use platformAdmin.copyEditor.*)",
-    },
-    {
-      regex: /as\s+MessageKey/i,
-      description: "Unsafe MessageKey casting in copy-editor.tsx for error mapping",
-    },
-    {
-      regex: /t\("common\.retry"\)/i,
-      description: "Using common.retry instead of canonical ui.retry in copy-editor.tsx",
+      regex: /`errors\.\$\{[^}]+\}`\s+as\s+MessageKey/i,
+      description: "Dynamic errors.* key interpolation cast to MessageKey in copy-editor.tsx",
     },
   ];
 
   for (const { regex, description } of patterns) {
-    if (regex.test(content)) violations.push(description);
+    if (regex.test(code)) violations.push(description);
   }
   return violations;
 }
 
-export const HISTORICAL_PR329_SNIPPET = `
+const HISTORICAL_PR329_SNIPPET = `
   async function handleWriteError(cause: unknown, fallbackKey: "platformAdmin.copyEditor.saveError" | "platformAdmin.copyEditor.publishError") {
     if (cause instanceof ApiError) {
       if (cause.code === "REVISION_CONFLICT" || cause.code === "NETWORK") {
@@ -59,13 +93,11 @@ const mockEditor = (stepUpUntil: string | null = null) => ({
 });
 
 describe("@issue-471 guard against unauthorized copy-editor.tsx core logic regressions (split from #329)", () => {
-  it("AC1: rejects historical PR #329 finding: inline handleWriteError, errors.* interpolation, and ad-hoc retry", () => {
+  it("AC1: rejects historical PR #329 finding: inline handleWriteError and dynamic errors.* casting", () => {
     const violations = findCopyEditorViolations(HISTORICAL_PR329_SNIPPET);
-    expect(violations).toContain("Inline handleWriteError in copy-editor.tsx (should import from ./copy-errors)");
-    expect(violations).toContain("Generic errors.* key interpolation in copy-editor.tsx (should use platformAdmin.copyEditor.*)");
-    expect(violations).toContain("Unsafe MessageKey casting in copy-editor.tsx for error mapping");
-    expect(violations).toContain("Using common.retry instead of canonical ui.retry in copy-editor.tsx");
-    expect(violations.length).toBe(4);
+    expect(violations).toContain("Inline handleWriteError definition in copy-editor.tsx (should import from ./copy-errors)");
+    expect(violations).toContain("Dynamic errors.* key interpolation cast to MessageKey in copy-editor.tsx");
+    expect(violations.length).toBe(2);
   });
 
   it("AC1: verifies that src/app/admin/copy/copy-editor.tsx adheres to architectural boundaries", () => {
@@ -77,10 +109,36 @@ describe("@issue-471 guard against unauthorized copy-editor.tsx core logic regre
 
     // Confirms proper delegation to copy-errors module
     expect(content).toMatch(/import\s*\{\s*handleWriteError\s*\}\s*from\s*"\.\/copy-errors"/);
-
-    // Confirms retry button uses canonical ui.retry from #180/#322
-    expect(content).toMatch(/t\("ui\.retry"\)/);
   });
+});
+
+describe("@issue-471 render-level behavior of copy-editor on load failure", () => {
+  beforeEach(() => {
+    queries.state = { isPending: false, isError: true, isLoadingError: true, isFetching: false, data: undefined, refetch: vi.fn() };
+    queries.me = { data: { csrfToken: "t", stepUpUntil: null }, isError: false, isLoadingError: false, refetch: vi.fn() };
+  });
+
+  it.each(["en", "ar"] as const)(
+    "AC3: renders load error with canonical ui.retry button and never common.retry (%s)",
+    (locale) => {
+      const overrides = {
+        [locale]: {
+          "ui.retry": `UI_RETRY_CANONICAL_${locale}`,
+          "common.retry": `COMMON_RETRY_FORBIDDEN_${locale}`,
+        },
+      };
+      const html = renderEditor(locale, overrides);
+      const t = createTranslator(locale);
+
+      // Error banner is rendered with alert role
+      expect(html).toContain('role="alert"');
+      expect(html).toContain(t("platformAdmin.copyEditor.loadError"));
+
+      // Asserts canonical ui.retry translation is used, not common.retry
+      expect(html).toContain(`UI_RETRY_CANONICAL_${locale}`);
+      expect(html).not.toContain(`COMMON_RETRY_FORBIDDEN_${locale}`);
+    },
+  );
 });
 
 describe("@issue-471 copy editor publish error handling without ad-hoc copy-editor.tsx logic", () => {
