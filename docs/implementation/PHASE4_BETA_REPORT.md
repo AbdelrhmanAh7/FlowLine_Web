@@ -408,7 +408,7 @@ Resolved QA blocker finding `a92221d3e947` from PR #410 and round 2 finding `2d1
 2. Exported action filtering and availability helpers: `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates`.
 3. Added `designTemplates.deal-won-mizano-quote` dictionaries to both `src/i18n/messages/en.json` and `src/i18n/messages/ar.json`, ensuring Arabic node labels consistently use em-dash (`—`, U+2014) rather than hyphen (`-`, U+002D) for `customer`, `quote`, and `notify` (`"صفقة مكسوبة → عرض سعر Mizano"`).
 4. Fixed Playwright `getByRole` overload usage in `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to pass `{ name: "Use template" }` options object.
-5. Covered by 8 unit tests in `tests/unit/deal-won-mizano-template.test.ts`, 7 unit tests in `tests/unit/template-actions.test.ts`, 44 unit tests in `tests/unit/i18n-content-text.test.ts`, and 19 unit tests in `tests/unit/i18n.test.ts`. Demonstrated regression failure on base state (2 failures, exit code 1) and full pass on head (exit code 0).
+5. Covered by 8 unit tests in `tests/unit/deal-won-mizano-template.test.ts`, 7 unit tests in `tests/unit/template-actions.test.ts`, 44 unit tests in `tests/unit/i18n-content-text.test.ts`, and 28 unit tests in `tests/unit/i18n.test.ts` (87 total). Demonstrated regression failure on base state (2 failures, exit code 1) and full pass on head (exit code 0).
 6. Evidence documented in `docs/evidence/421/EVIDENCE.md`.
 
 
