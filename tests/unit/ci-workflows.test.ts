@@ -709,6 +709,4 @@ describe("issue #335 gate preservation (AC2)", () => {
     }
   });
 });
-  });
-});
 
