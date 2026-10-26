@@ -451,6 +451,20 @@ describe("mizano.create_draft_quote", () => {
     ).rejects.toThrow();
   });
 
+  it.each(["1.005", 0.001, "abc", " 5 ", "1e3", Number.NaN, Number.POSITIVE_INFINITY])(
+    "rejects %j as a validation error without rounding or calling Mizano",
+    async (bad) => {
+      for (const field of ["qty", "unitPrice", "taxRate"] as const) {
+        const { ctx, request } = ctxReturning(quoteResponse);
+        const line = { item: "Consulting", qty: "1", unitPrice: "1.00", taxRate: "0.00", [field]: bad };
+        await expect(
+          runAction("mizano.create_draft_quote", ctx, { customerId: "cust_123", currency: "EGP", lines: [line] }),
+        ).rejects.toThrow();
+        expect(request).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   it("accepts decimal strings for qty, unitPrice, and taxRate", async () => {
     const decimalQuote = {
       id: "quote_456",

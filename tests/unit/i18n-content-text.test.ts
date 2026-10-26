@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DESIGN_TEMPLATES } from "@/engine/design-templates";
 import { LOCAL_TEMPLATES } from "@/engine/templates";
-import { allProviders, listProviders } from "@/integrations/registry";
+import { listProviders } from "@/integrations/registry";
 import {
   actionDescription,
   actionTitle,
@@ -96,9 +96,11 @@ describe("template step labels and names", () => {
     expect(templateName(ar, { id: "no-such-template", name: "Mine" })).toBe("Mine");
   });
 
-  it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242, #340)", () => {
-    expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won → Mizano quote");
-    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("صفقة مكسوبة → عرض سعر Mizano");
+  it("deal-won-mizano-quote localTemplate entry matches the expected English text and structure (#242, #340, #454)", () => {
+    expect((en as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("Deal won — Mizano quote");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toBe("صفقة مكسوبة — عرض سعر Mizano");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toContain("—");
+    expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).not.toContain("→");
     expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).not.toContain("←");
     expect((ar as (k: string) => string)("localTemplates.deal-won-mizano-quote.name")).toMatch(ARABIC);
     for (const key of ["description", "sample", "result"] as const) {
@@ -113,7 +115,7 @@ describe("template step labels and names", () => {
 });
 
 describe("integration catalog text", () => {
-  for (const p of allProviders()) {
+  for (const p of listProviders()) {
     it(`${p.id}: category, description, actions and connect fields are Arabic; English is the source`, () => {
       expect(ar.has(`integrationCategory.${p.category}`), `category "${p.category}"`).toBe(true);
       expect(providerCategory(ar, p.category)).toMatch(ARABIC);
@@ -161,7 +163,7 @@ describe("integration catalog text", () => {
   });
 
   it("the Mizano provider description and action descriptions are properly localized in Arabic (#365)", () => {
-    const mizano = allProviders().find((p) => p.id === "mizano")!;
+    const mizano = listProviders().find((p) => p.id === "mizano")!;
     expect(providerDescription(ar, mizano)).toBe("موصل المحاسبة Mizano");
 
     const createCustomer = mizano.actions.find((a) => a.id === "mizano.create_customer")!;

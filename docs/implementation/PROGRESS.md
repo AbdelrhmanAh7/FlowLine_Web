@@ -101,3 +101,7 @@ already on main (`39364b5d`). e2e-army run for this head: not run locally (sandb
 
 PR #418, 2026-10-22 (supersedes #263, closes #252). The integrations catalog keeps pre-GA Mizano out of `listProviders()` (`src/integrations/registry.ts`) while `allProviders()` / `getProvider()` / `getAction()` preserve registration for lookups and contract tests; `GET /api/integrations/catalog` returns exactly 12 supported providers in pinned order; `tests/unit/integrations-catalog.test.ts` (fails on base, 5/5 on head); `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` asserts 12 providers without Mizano; typecheck and lint exit 0. Evidence in `docs/evidence/313/EVIDENCE.md`.
 
+
+# Stable gate fix — `fl-integrations`, 2026-10-24 (corrects PR #418)
+
+PR #418 hid Mizano from `listProviders()` to match a failure text recorded for #252, but the release-train suite had asserted the 13-provider catalog (Mizano last) since 2026-10-15 (hub `fa369e24`), so the gate went from "12 expected, 13 returned" to "13 expected, 12 returned" and `fl-integrations` stayed red on stable-2026-10-24. The catalog lists all 13 providers again (the `PRE_GA` filter and `allProviders()` are removed), `tests/unit/integrations-catalog.test.ts` pins the 13 ids, and the in-repo copy `e2e-army/features/platform-api.e2e.ts` asserts the same 13 as the release-train suite. `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` is back to its #147 / #148 assertions (Mizano and its actions are offered). `docs/evidence/313/EVIDENCE.md` describes the superseded 12-provider behaviour.
