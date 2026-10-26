@@ -4,7 +4,7 @@
 **Branch:** ai/435
 **PR:** #489
 **Base:** main (`1eceed2b`)
-**Tested commit SHA:** `492e4d6b`
+**Tested commit SHA:** `4823368f`
 **Supersedes part of:** #383 (parent issue #165)
 **Area:** Builder / RTL Internationalization
 
@@ -89,7 +89,7 @@ Unit test `tests/unit/node-config-rtl.test.ts` detects 4 offending elements:
 - Line 563: `<code className="data">$steps.<id></code>`
 Result: 2 tests FAIL (exit code 1)
 
-### On Head (`492e4d6b`)
+### On Head (`4823368f`)
 Command:
 ```bash
 pnpm exec vitest run tests/unit/node-config-rtl.test.ts
