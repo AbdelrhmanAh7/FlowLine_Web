@@ -683,3 +683,32 @@ describe("workflow triggers, checkout refs, and fork isolation invariants (#298)
   });
 });
 
+describe("issue #335 gate preservation (AC2)", () => {
+  it("preserves all required CI workflows and composite actions with zero weakened gates", () => {
+    expect(workflowFiles).toEqual([
+      ".github/workflows/claude.yml",
+      ".github/workflows/docs.yml",
+      ".github/workflows/gate.yml",
+      ".github/workflows/nightly.yml",
+    ]);
+    expect(actionFiles).toEqual([
+      ".github/actions/gate-report/action.yml",
+      ".github/actions/setup-gate/action.yml",
+    ]);
+  });
+
+  it("ensures no test files use .skip() or .only() to bypass gates", () => {
+    for (const subDir of ["unit", "contract", "integration"]) {
+      const dir = join(root, "tests", subDir);
+      const files = readdirSync(dir).filter((f) => f.endsWith(".ts"));
+      for (const file of files) {
+        const content = readFileSync(join(dir, file), "utf8");
+        expect(content, `${subDir}/${file} must not contain .skip()`).not.toMatch(/\b(it|test|describe)\.skip\(/);
+        expect(content, `${subDir}/${file} must not contain .only()`).not.toMatch(/\b(it|test|describe)\.only\(/);
+      }
+    }
+  });
+});
+  });
+});
+
