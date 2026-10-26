@@ -37,6 +37,8 @@ Changed covering tests: `tests/unit/n8n-import.test.ts` (AC1/AC3), `e2e-army/117
 
 ## Remaining verification and PR handoff
 
+Merge with `origin/main`: resolved conflicts in `docs/implementation/PROGRESS.md`, `src/server/flows.ts` and `tests/integration/flows.test.ts` keeping both sides' intent. Added `e2e/n8n-import.spec.ts` to `scripts/gate-groups.mjs` under the `editor` group so that gate manifest checks pass. Full unit suite passed (`pnpm test`: 153 files, 1974 passed); full contract suite passed (`pnpm test:contract`: 26 files, 548 passed); `pnpm typecheck` and `pnpm lint` passed with 0 errors.
+
 AC2 execution/screenshots and the blocking `e2e-army` status require the harness's isolated test stack. This report is not an E2E pass. The original unscoped push-gate command remains an infrastructure blocker: CI configuration changes are prohibited by this issue. Full suite/build were deliberately left to hosted CI per owner instructions. Runtime here was Node 26.10.0; package engine requests Node 24.x. `nice` reported an unavailable priority adjustment in the sandbox; tests still executed.
 
 PR body must include “Supersedes part of #368”, `Refs #295`, and link this report as the VERIFICATION REPORT. Dependencies, secrets and workflow permissions are unchanged. No push, PR creation or merge performed.

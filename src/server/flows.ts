@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db, schema, type Db } from "@/db";
 import { assertRouteSelection } from "@/ai/hub/selection";
 import { NODE_TYPES, type FlowGraph } from "@/engine/types";
-import { DESIGN_TEMPLATES } from "@/engine/design-templates";
+import { DESIGN_TEMPLATES, missingTemplateActions } from "@/engine/design-templates";
 import { BLANK_GRAPH, LOCAL_TEMPLATES } from "@/engine/templates";
 import type { Locale } from "@/i18n/config";
 import { localizeTemplate } from "@/i18n/template-text";
@@ -14,6 +14,7 @@ import type { CurrentUser } from "./access";
 import { consumeFault } from "./faults";
 import { HttpError, notFound } from "./http";
 import { n8nToFlow } from "./n8n-import";
+import { getAction } from "@/integrations/registry";
 
 const position = z.object({ x: z.number().finite(), y: z.number().finite() });
 const nodeSchema = z.object({
@@ -85,6 +86,12 @@ export async function createFlow(
   const template = input.templateId ? [...LOCAL_TEMPLATES, ...DESIGN_TEMPLATES].find((t) => t.id === input.templateId) : undefined;
   if (input.templateId && !template) throw new HttpError(400, "UNKNOWN_TEMPLATE", "That template isn't available");
   const imported = input.n8n !== undefined ? n8nToFlow(input.n8n) : null;
+  if (template) {
+    const missing = missingTemplateActions(template.graph, { has: (id: string) => getAction(id) !== undefined });
+    if (missing.length > 0) {
+      throw new HttpError(409, "TEMPLATE_UNAVAILABLE", `That template needs app actions that aren't available yet: ${missing.join(", ")}`);
+    }
+  }
   const localized = template ? (locale ? localizeTemplate(createTranslator(locale), template) : { name: template.name, graph: structuredClone(template.graph) }) : null;
   const name = flowNameSchema.parse(input.name ?? imported?.name ?? localized?.name ?? "Untitled flow");
   // An imported graph goes through the same limits every other save path uses (node/edge caps, 512 KB) before it is stored.

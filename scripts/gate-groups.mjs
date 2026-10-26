@@ -21,7 +21,7 @@ export const GROUPS = {
   },
   editor: {
     description: "flow builder canvas, keyboard, forms, library, runs, failures, local scenarios",
-    specs: ["builder-keyboard", "canvas", "dynamic-form", "failures", "keyboard-surfaces", "library", "local-scenarios", "run-states"],
+    specs: ["builder-keyboard", "canvas", "dynamic-form", "failures", "keyboard-surfaces", "library", "local-scenarios", "n8n-import", "run-states"],
   },
   platform: {
     description: "AI hub, admin panel, phase 2/3 platform features",

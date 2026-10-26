@@ -102,7 +102,7 @@ async function runToEnd(http: Http, flowId: string) {
 }
 
 test(
-  "@issue-204 (from #117) AC1: the flow list and dashboard show each flow's last run, success rate and first published version (v1)",
+  "@issue-351 AC1: the flow list and dashboard show each flow's last run, success rate and first published version (v1)",
   { tags: ["feat:fl-flows-list", "lvl:api"] },
   async ({ app }) => {
     const base = app.baseUrl!;
