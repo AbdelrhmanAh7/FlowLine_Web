@@ -121,9 +121,11 @@ checks used Node 26.10.0; the project's supported Node 24 validation remains for
 
 ## Account deletion vs the user's own SSO sign-in: lock-order test — 2026-10-12 (issue #108, part 1 of #47)
 
-`tests/integration/account-delete-sso-lock-order.test.ts` runs the real `consumeAccountToken("delete")` and `completeSso` for one user on two PostgreSQL connections, in both orders, and requires both to settle without `40P01`. This is a **regression test** for the lock ordering fix from issue #109 (PR #216, commit `d86fb7d7`): the fix made `consumeAccountToken("delete")` lock the user row and write its `account.deleted` audit rows before locking workspaces `FOR UPDATE`, matching the SSO transaction order.
+`tests/integration/account-delete-sso-lock-order.test.ts` runs the real `consumeAccountToken("delete")` and `completeSso` for one user on two PostgreSQL connections, in both orders, and requires both to settle without `40P01`. The change that removed the deadlock between account deletion confirmation and SSO sign-in was **issue #45 (PR #65)**: the fix made `consumeAccountToken("delete")` lock the user row before the workspaces, matching the SSO transaction order and preventing the circular wait where deletion held the workspace row and waited at `delete from "user"` while SSO held the user row and needed a key-share lock on that workspace. (Git history inspection of parent commit `83c7bb8e:src/server/email/flows.ts` confirms it already contained the user-first locking from PR #65; the prior attribution in PR #214 stating that `83c7bb8e` had deletion holding the workspace row and waiting at `delete from "user"` was an erroneous conflation, as that circular wait predated #65, not #109).
 
-**Acceptance criteria & history (#108 / #109):** Issue #108 originally called for an integration test that "reliably fails due to the lock ordering". The test was created on branch `ai/108` along with helper `tests/integration/pg-lock-helpers.ts`. When issue #109 (PR #216) implemented the lock-reordering fix in `src/server/email/flows.ts`, it copied `account-delete-sso-lock-order.test.ts` and `pg-lock-helpers.ts` verbatim from `ai/108` to satisfy its own verification ("passes the deadlock test"), and PR #216 was merged to `main` first (commit `d86fb7d7`). Authored on `ai/108`, copied into PR #216, the test serves as a regression guard on `main` verifying that both orders complete without deadlock (2/2 pass without `40P01`). The test guards against the lock-ordering deadlock hazard described in its header (in the SSO-first order prior to commit `d86fb7d7` / parent `83c7bb8e`, deletion held the workspace row and waited at `delete from "user"`, while the in-flight SSO transaction held the user row and needed a key-share lock on that workspace). No execution against the pre-fix parent commit `83c7bb8e` is recorded here; validation confirms that both orders finish without deadlock on the current codebase. `routeTransactions` is exported from `pg-lock-helpers.ts` and reused across `account-delete-sso-lock-order.test.ts` and `federated-lock-order.test.ts`. Local verification against a throwaway `flowline_test_i108` database: `tests/integration/account-delete-sso-lock-order.test.ts` (2/2 pass), `tests/integration/federated-lock-order.test.ts` (2/2 pass), eslint on the changed files, `pnpm typecheck` (`tsc --noEmit`), and the `.husky/pre-push` check suite (134/134 files, 1780 tests pass). CI remains the gate. No full gate or browser run is claimed here; this changes no beta or production acceptance. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
+**Acceptance criteria & history (#108 / #109):** Issue #108 originally called for an integration test that "reliably fails due to the lock ordering". The test was created on branch `ai/108` along with helper `tests/integration/pg-lock-helpers.ts`. When issue #109 (PR #216) implemented the subsequent audit-before-workspace reordering in `src/server/email/flows.ts` (part 2 of #47), it copied `account-delete-sso-lock-order.test.ts` and `pg-lock-helpers.ts` verbatim from `ai/108` to satisfy its own verification ("passes the deadlock test"), and PR #216 was merged to `main` first (commit `d86fb7d7`). As recorded in PR #214 (head `b9ae3ee`), because the PR #65 fix (and the subsequent #109 audit reordering) is now on `main`, the test passes on `main` (2/2 pass without `40P01`) and serves as an enduring regression guard. The test specifically guards against the pre-#65 deadlock hazard described in its header (in the SSO-first order under the pre-#65 sequence, deletion held the workspace row and waited at `delete from "user"`, while the in-flight SSO transaction held the user row and needed a key-share lock on that workspace). No execution against the pre-#65 commit is recorded here; validation on this branch confirms that both orders finish without deadlock on the current codebase. As recorded in PR #214, the test assertions are kept intact on the merged tree as a docs-and-regression deliverable, and `routeTransactions` is exported from `pg-lock-helpers.ts` and reused across `account-delete-sso-lock-order.test.ts` and `federated-lock-order.test.ts`. Verified locally against a throwaway `flowline_test_i108` database: the new file and `federated-lock-order.test.ts` (along with `tests/unit/email-token-lock-order.test.ts`, while `tests/integration/email-token-lock-order.test.ts` remains marked unexecuted locally), eslint on the changed files and `pnpm typecheck`. Merge and re-run 2026-10-14: `origin/main` (which already carries this test and helper via #109) was merged in; after the merge docs, helper comments and the `federated-lock-order.test.ts` header/helper import differ from main. The merged tree was re-checked with `tsc --noEmit` and eslint on the three lock-order files, and the previously-unrun-after-merge integration file was then re-run locally at `58e5823b` against the throwaway `flowline_test_i108` database (PostgreSQL 16): `nice -n 10 pnpm test:integration tests/integration/federated-lock-order.test.ts` -> `1 passed (1)` file, `2 passed (2)` tests in 9.8 s. That re-run is the current local evidence; CI remains the gate. No full gate or browser run is claimed here; this changes no beta or production acceptance. Details: [lock-order.md](../engineering/lock-order.md#workspace-for-update-vs-sso-audit-insert-47).
+
+Reconciliation 2026-10-14 (same issue, docs-only): every local-validation statement about `tests/integration/federated-lock-order.test.ts` across this entry, [Lock order](../security/FEDERATED_MFA.md#lock-order) and [Validation limits](../security/FEDERATED_MFA.md#validation-limits) agrees on the status: the test ran locally on 2026-10-12 against a throwaway PostgreSQL database for #108, and CI is the gate. The `email-token-lock-order` and `password-reset-lock-order` two-connection tests that remain marked unexecuted are different files. The file was additionally re-run first-hand on 2026-10-14 at `58e5823b` (`nice -n 10 pnpm test:integration tests/integration/federated-lock-order.test.ts` -> `1 passed (1)` file, `2 passed (2)` tests in 9.8 s), recorded in the merge paragraph above as extra evidence, not as the claim. No test code, test assertions or CI configuration changed.
 
 ## Company Builder refund note — 2026-10-04 (issue #49)
 
@@ -366,4 +368,77 @@ Structure matches `lead-qualifier` with `name`, `description`, `sample`, `result
 Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base, passes on head), `tests/unit/i18n.test.ts` (all 16 catalogue parity checks pass), and `tests/unit/local-scenarios.test.ts` (85/85 tests pass with pending subtask exclusion).
 Subtask of #149.
 
+## Blocker breaker: cigroup verify failure investigation (issue #335) — 2026-10-22
+
+Investigated `cigroup:AbdelrhmanAh7/FlowLine_Web:verify` alert across 5 cited PRs (#329, #215, #184, #139, #135).
+Proved via hub verification reports that each failed on independent branch-specific diffs and test planner
+expectations rather than a shared regression on `main`. Cited PRs have been superseded or resolved by fresh
+restarts (#376 merged at `8167bcbb`, #380 passed verify at `311ffd4`, #385 passed verify at `4d69ef1`).
+All CI workflow gates preserved with zero workflow edits (`tests/unit/ci-workflows.test.ts` 82/82 passing).
+Evidence documented in `docs/evidence/335/EVIDENCE.md`.
+
+## i18n: RTL arrow consistency in Arabic gallery template string (issue #340) — 2026-10-23
+
+Resolved non-blocking P3 localization review finding from PR #334 on `deal-won-mizano-quote`:
+- Updated `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:361` from `"صفقة مكسوبة ← عرض سعر Mizano"` to `"صفقة مكسوبة → عرض سعر Mizano"`, replacing the leftwards arrow (`←`, U+2190) with the rightwards arrow (`→`, U+2192) for Arabic RTL typographic consistency.
+- Added test coverage in `tests/unit/i18n-content-text.test.ts` and `tests/unit/i18n.test.ts` (`local template localization consistency (#340)`), asserting exact name equality and guarding against misplaced `←` arrows across all local templates.
+- Demonstrated regression failure on base state (3 failures, rc=1) and 61/61 passes on head state (rc=0).
+- Evidence documented in `docs/evidence/340/EVIDENCE.md`.
+
+## Template validation: detailed missing actions error (issue #341) — 2026-10-23
+
+Resolved review findings from PR #244:
+1. **Template validation error specificity**: In `src/server/flows.ts` (`createFlow`), when template validation detects missing app actions that are not registered in the provider registry, the error message now lists the missing action IDs explicitly (`That template needs app actions that aren't available yet: action_one, action_two`) instead of a generic opaque rejection.
+2. **Template action inspection helpers**: In `src/engine/design-templates.ts`, added `templateActionIds`, `missingTemplateActions`, `availableDesignTemplates`, and `heldBackDesignTemplates` helpers to inspect action requirements and filter available vs held-back design templates.
+Covered by unit tests in `tests/unit/template-actions.test.ts` (6/6 passing) and integration tests in `tests/integration/flows.test.ts` (13/13 passing). Regression demonstrated against base failure. Follow-up from #244. Evidence in `docs/evidence/341/EVIDENCE.md`.
+
+## Integrations catalog stable gate fix (issue #313, closes #252, supersedes #263) — 2026-10-23
+
+Resolved `fl-integrations` stable gate failure on main:
+1. Kept pre-GA Mizano out of `listProviders()` in `src/integrations/registry.ts` via `PRE_GA` set filter while retaining internal registration in `allProviders()`, `getProvider()` and `getAction()`.
+2. Verified `GET /api/integrations/catalog` returns exactly 12 supported providers in pinned order with `count: 12`.
+3. Added unit tests in `tests/unit/integrations-catalog.test.ts` (5/5 passing, demonstrating base failure vs head pass).
+4. Updated `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` to assert 12 providers and verify Arabic RTL layout without Mizano, keeping top-level e2e-army files capped at ≤8.
+5. All 53 contract tests in `tests/contract/mizano*.test.ts` continue to pass.
+
+## i18n: Arabic typography em-dash consistency for backupCodes (issue #434, split from #383) — 2026-10-23
+
+Resolved localization review finding 232f2a67a05a from PR #383 (parent #165) and round 1 findings 9d0db94dd27d / 4357ac834349:
+- Added `account.security.twoFactor.backupCodes` to `src/i18n/messages/ar.json` using em-dash (`—`, U+2014) instead of regular hyphen (`-`): `"رموز النسخ الاحتياطي — تُعرض مرة واحدة فقط، احتفظ بها خارج الإنترنت."`.
+- Added matching English string to `src/i18n/messages/en.json`: `"Backup codes — shown only once, store them offline."`.
+- Aligned key positioning in both catalogues (`account.security` placed adjacent to `account.settings`), ensuring diff visibility during delta review rounds.
+- Added regression test suite in `tests/unit/i18n.test.ts` (`Arabic typography and em-dash consistency (findings 232f2a67a05a, 9d0db94dd27d, 4357ac834349, #434)`) asserting typography compliance across all `backupCodes` entries in both catalogues with strict Unicode character checks.
+- Demonstrated regression failure on base branch (exit 1, 2 failed tests) and green on head (exit 0, 22/22 passed tests).
+- Pre-push checks verified: `pnpm typecheck` (exit 0), `pnpm lint` (exit 0), `vitest` (exit 0).
+- Evidence documented in `docs/evidence/434/EVIDENCE.md`.
+
+## i18n: No directional arrow in Arabic template name (issue #454, split from #445) — 2026-10-24
+
+Resolved localization review findings `08bddb2f551f` and `9c8bf91e0489` from PR #445 (parent #421):
+- `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:364` is now `"صفقة مكسوبة — عرض سعر Mizano"`: the right-pointing arrow (`→`, U+2192) is replaced by an em-dash (`—`, U+2014), which has no direction and reads correctly in RTL. The description (`ar.json:365`) got the same change.
+- Node labels (`ar.json:369-373`) use the em-dash, not a hyphen. `Mizano` and `Slack` stay in Latin script as brand names.
+- Regression tests: `tests/unit/i18n.test.ts` (template localization consistency and RTL typography) and `tests/unit/i18n-content-text.test.ts` assert the em-dash and no `→`/`←` in the Arabic template strings.
+- Evidence: `docs/evidence/454/EVIDENCE.md`.
+
+## Follow-up from #271: review findings outside its scope (issue #292) — 2026-10-21
+
+Resolved audit requirements for issue #292 (follow-up review findings moved from #271 by the review-loop breaker).
+Guarded `src/integrations/providers/mizano.ts` input validation (rejecting non-matching money and quantity inputs, non-finite numbers, and values with >2 decimals without rounding, covering "1.005", 0.001, "abc", " 5 ", "1e3", NaN, Infinity) with unit tests in `tests/unit/mizano-inputs.test.ts` (13/13 passing) and contract tests in `tests/contract/mizano.test.ts` (57/57 passing).
+Reconciled and documented the status, fixing PRs/commits, and resolution rationale for all out-of-scope review findings originating from PRs #291, #210, #263, #170, #184, #267 in `docs/evidence/292/EVIDENCE.md`.
+
+## Workflow verification correction — issue #460 — 2026-10-25
+
+Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.
+
+## Malformed percent-escapes answer 404 (issue #426, supersedes part of #380) — 2026-10-26
+
+`src/proxy.ts` (Next.js 16's name for middleware) answers a path or query string with an undecodable percent-escape with a 404 (bounded JSON for `/api/*`, the not-found page otherwise) instead of a framework error. Evidence: `docs/evidence/426/EVIDENCE.md`.
+
+## Guard copy-editor.tsx core logic and publish errors (issue #471, split from #329) — 2026-10-26
+
+Resolved CodeRabbit review finding `5d6aad501027` from PR #329 (parent #228) concerning unauthorized modifications to `src/app/admin/copy/copy-editor.tsx`:
+- Verified `copy-editor.tsx` adheres strictly to architectural boundaries without inline `handleWriteError`, unsafe `errors.*` key interpolation, or ad-hoc retry buttons.
+- Documented and verified that `src/app/admin/copy/copy-errors.ts` (delivered in parent #180 / PR #322) cleanly handles all write errors including publish fallbacks (500 INTERNAL, STEP_UP_REQUIRED, validation errors, revision conflicts, and network failures) without touching editor component core logic.
+- Added permanent regression guard and publish error suite in `tests/unit/admin/copy/copy-editor-publish-errors.test.ts` (7/7 passed).
+- Evidence: `docs/evidence/471/EVIDENCE.md`.
 
