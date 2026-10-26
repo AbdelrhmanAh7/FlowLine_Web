@@ -368,25 +368,34 @@ test.describe("landing copy and illustration contrast @cross-browser", () => {
         await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
         await expect(page.locator("html")).toHaveAttribute("lang", locale);
         const hero = page.getByTestId("landing-hero-scene").getByRole("group");
-        await expect(hero).toContainText(locale === "en" ? "Starts the flow" : "يبدأ سير العمل");
+        const demo = hero.getByTestId("landing-demo");
+        if (await demo.count()) await expect(demo).toHaveAttribute("aria-label", /.+/);
+        else await expect(hero).toContainText(locale === "en" ? "Starts the flow" : "يبدأ سير العمل");
         await expect(hero).not.toContainText(/JSONATA|JSON|IF \/ ELSE|TRIGGER ·/);
         for (const width of [360, 768, 1024, 1440]) {
           await resizeTo(page, width);
-          const styles = await hero.evaluate((el) => {
-            const board = getComputedStyle(el);
-            const card = el.querySelector(".rounded-lg")!;
-            const css = getComputedStyle(card);
-            return { grid: board.backgroundImage, dot: board.getPropertyValue("--canvas-dot").trim(), board: board.backgroundColor,
-              card: css.backgroundColor, border: css.borderTopColor, shadow: css.boxShadow,
-              overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
-          });
-          expect(styles.grid).toContain("radial-gradient");
-          expect(styles.dot).not.toBe("");
-          expect(styles.grid).not.toContain("transparent 1px, transparent");
-          expect(styles.card).not.toBe(styles.board);
-          expect(styles.border).not.toBe(styles.card);
-          expect(styles.shadow).not.toBe("none");
-          expect(styles.overflow).toBeLessThanOrEqual(1);
+          if (await demo.count()) {
+            await expect(hero.getByTestId("landing-demo-poster")).toBeVisible();
+            expect(await hero.getByTestId("landing-demo-poster").evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+            await expect(demo).not.toHaveAttribute("src");
+            expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+          } else {
+            const styles = await hero.evaluate((el) => {
+              const board = getComputedStyle(el);
+              const card = el.querySelector(".rounded-lg")!;
+              const css = getComputedStyle(card);
+              return { grid: board.backgroundImage, dot: board.getPropertyValue("--canvas-dot").trim(), board: board.backgroundColor,
+                card: css.backgroundColor, border: css.borderTopColor, shadow: css.boxShadow,
+                overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+            });
+            expect(styles.grid).toContain("radial-gradient");
+            expect(styles.dot).not.toBe("");
+            expect(styles.grid).not.toContain("transparent 1px, transparent");
+            expect(styles.card).not.toBe(styles.board);
+            expect(styles.border).not.toBe(styles.card);
+            expect(styles.shadow).not.toBe("none");
+            expect(styles.overflow).toBeLessThanOrEqual(1);
+          }
           await hero.scrollIntoViewIfNeeded();
           await page.screenshot({ path: testInfo.outputPath(`landing-${locale}-${theme}-${width}-hero.png`) });
           const flowTitle = page.getByRole("heading", { name: locale === "en" ? "Follow a flow step by step" : "تابع سير العمل خطوة بخطوة" });

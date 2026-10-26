@@ -150,3 +150,15 @@ only reads `events.json` + `master.mp4`, so Revideo (MIT) remains a drop-in fall
 
 The cross-process lock unit test announces readiness only after registering its SIGTERM cleanup.
 The parent always terminates and awaits the child before checking lock reacquisition.
+
+## Landing consumption — issue #357 (AC1 slice)
+
+`src/lib/demo-media.ts` reads and validates the manifest using the existing pipeline contract; only a missing file
+returns `null`. The landing page renders the original `HeroPin` illustration when no hero/poster is available.
+With media, its scroll container wraps `DemoVideo`: a preloaded high-priority poster, native muted inline video,
+and localized pause/play control. `demo-source.ts` resolves locale/light fallbacks and the specified AV1/H.264
+capability preference. Autoplay waits for load and 25% intersection, pauses offscreen/hidden, and respects motion/data
+preferences; explicit play can request a single play under those preferences. No new dependencies.
+The caller of `HeroPin` is `src/app/page.tsx`; its optional visual preserves the existing illustration fallback.
+Walkthrough, bento, complete playback-policy verification and performance/cache/range verification remain pending;
+[#100](https://github.com/AbdelrhmanAh7/FlowLine_Web/issues/100) is not complete. See [verification report](../evidence/357/EVIDENCE.md).

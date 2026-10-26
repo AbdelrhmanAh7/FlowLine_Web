@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { preload } from "react-dom";
+import { readDemoManifest, fileFor } from "@/lib/demo-media";
+import { DemoVideo } from "@/components/landing/demo-video";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { LANDING_TEMPLATES, LOCAL_TEMPLATES } from "@/engine/templates";
@@ -24,6 +27,11 @@ export default async function Landing() {
   const session = await auth.api.getSession({ headers: await headers() }).catch(() => null);
   const signedIn = Boolean(session);
   const t = await getT();
+  const manifest = await readDemoManifest();
+  const hero = manifest?.clips.hero;
+  const files = manifest ? fileFor(manifest, "hero", t.locale, "light") : [];
+  const poster = files.find((f) => f.kind === "poster");
+  if (poster) preload(`/media/demo/${poster.path}`, { as: "image", fetchPriority: "high" });
   // Built-in template copy is translated by id; anything else keeps the engine's English text.
   const tr = (key: string, fallback: string) => (t.has(key) ? t(key as MessageKey) : fallback);
 
@@ -107,7 +115,7 @@ export default async function Landing() {
               </Magnetic>
             </div>
 
-            <HeroPin label={t("landing.canvasAria")} nodes={[
+            <HeroPin visual={hero && poster ? <DemoVideo clip={hero} files={files} poster={`/media/demo/${poster.path}`} /> : undefined} label={t("landing.canvasAria")} nodes={[
               { id: "t", type: "trigger.manual", label: t("landing.heroNodes.trigger"), sub: t("landing.heroNodes.triggerSub") },
               { id: "n", type: "transform.json", label: t("landing.heroNodes.transform"), sub: t("landing.heroNodes.transformSub") },
               { id: "c", type: "logic.condition", label: t("landing.heroNodes.condition"), sub: t("landing.heroNodes.conditionSub") },

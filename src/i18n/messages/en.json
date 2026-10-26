@@ -261,6 +261,7 @@
     "retry": "Retry"
   },
   "landing": {
+    "demo": { "play": "Play demo", "pause": "Pause" },
     "navAria": "Site navigation",
     "nav": {
       "product": "Product",

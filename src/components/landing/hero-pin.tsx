@@ -1,7 +1,7 @@
 "use client";
 
 import { useMotionValueEvent, useScroll } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { FlowIllustration, type IllustrationNode } from "./flow-illustration";
 import { useFlowProgress } from "./flow-progress";
 import { FlowStepPreview } from "./flow-step-preview";
@@ -18,7 +18,7 @@ import { Reveal } from "./reveal";
  * `(prefers-reduced-motion: no-preference)` block, so the fallback has no dead scroll space. The markup is the same in
  * every case. Transform only, no layout shift.
  */
-export function HeroPin({ nodes, label }: { nodes: IllustrationNode[]; label: string }) {
+export function HeroPin({ nodes, label, visual }: { nodes: IllustrationNode[]; label: string; visual?: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start center", "end center"] });
   const lit = useFlowProgress(scrollYProgress, nodes.length);
@@ -32,10 +32,10 @@ export function HeroPin({ nodes, label }: { nodes: IllustrationNode[]; label: st
     <div ref={ref} data-testid="landing-hero-scene" className="hero-pin w-full max-w-4xl">
       <div className="hero-pin-stage">
         <div className="hero-scrub">
-          <div role="group" aria-label={label} className="w-full rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
+          {visual ?? <><div role="group" aria-label={label} className="w-full rounded-xl border border-line bg-app bg-[radial-gradient(var(--canvas-dot)_1px,transparent_1px)] [background-size:16px_16px] p-6 sm:p-10">
             <FlowIllustration nodes={nodes} lit={active + 1} onSelect={(index) => { selectedAt.current = scrollYProgress.get(); setSelected(index); }} />
           </div>
-          <Reveal><FlowStepPreview node={nodes[active]} step={active} testId="landing-hero-step-preview" /></Reveal>
+          <Reveal><FlowStepPreview node={nodes[active]} step={active} testId="landing-hero-step-preview" /></Reveal></>}
         </div>
       </div>
     </div>

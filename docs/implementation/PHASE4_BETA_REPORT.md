@@ -419,3 +419,10 @@ Reconciled and documented the status, fixing PRs/commits, and resolution rationa
 ## Workflow verification correction — issue #460 — 2026-10-25
 
 Corrected full-tier verification to inspect matching-SHA dispatch jobs rather than run titles. Removed per-PR status prose from the workflow guide; live observations for #360, #330 and #308 (all gate failures) and local regression results are in [the verification report](../evidence/460/EVIDENCE.md). No application or CI behavior changed.
+
+## Landing demo hero — issue #357 (partial, 2026-10-26)
+
+Original #100 AC1 is implemented as the size-limited first slice: manifest-driven hero with its existing scroll
+container, priority poster and deferred capability-selected playback. No production verification is claimed.
+Walkthrough/bento and the remaining acceptance criteria stay open; do not close #100/#357/#96.
+Focused evidence and limitations: [verification report](../evidence/357/EVIDENCE.md).
