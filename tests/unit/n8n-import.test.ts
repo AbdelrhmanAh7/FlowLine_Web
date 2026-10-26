@@ -116,6 +116,15 @@ describe("n8nToFlow", () => {
     }
   });
 
+  it.each(["foo", ".webhook", "n8n-nodes-base.", "n8n-nodes-base.web hook"])(
+    "AC1: rejects a node type without a valid package.node namespace: %s",
+    (type) => {
+      expect(() => n8nToFlow({ nodes: [{ name: "Invalid", type }] })).toThrowError(
+        expect.objectContaining({ status: 400, code: "INVALID_N8N_JSON" }),
+      );
+    },
+  );
+
   it("turns httpRequest node with n8n expressions in URL into a placeholder", () => {
     const withExpr = {
       nodes: [{ name: "Hook", type: "n8n-nodes-base.webhook", position: [0, 0], parameters: {} }, { name: "Req", type: "n8n-nodes-base.httpRequest", position: [240, 0], parameters: { url: "https://api.example.com/{{ $json.id }}" } }],

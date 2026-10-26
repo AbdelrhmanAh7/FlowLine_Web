@@ -356,3 +356,6 @@ Tested with `tests/unit/i18n-content-text.test.ts` (demonstrated failure on base
 Subtask of #149.
 
 
+## Issue #378 — n8n node-type validation (2026-10-25)
+
+The importer now rejects node types without a `package.node` namespace. Regression observed on the unchanged starting importer: four failures; after the schema fix: 28 importer tests passed, and 48 focused related unit tests passed. Typecheck/lint passed. EN/AR upload scenarios and Playwright screenshot tests were added; execution remains blocked by missing `.env.test` / test-stack URL. The unscoped `vitest related` push-gate command initializes DB projects without a test database and remains an infrastructure follow-up; no CI configuration was changed. See [verification report](../evidence/378/EVIDENCE.md). This is not release or E2E verification.
