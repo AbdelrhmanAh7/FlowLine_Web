@@ -214,13 +214,19 @@ export function createJobDir(jobRoot: string, jobId: string): string {
 
 /** Reads a file the CLI wrote inside the job dir; refuses symlinks and anything outside the dir, caps the size. */
 export function readJobFile(jobDir: string, name: string, maxBytes: number): string | null {
-  const p = resolvePath(jobDir, name);
+  const realDir = realpathSync(jobDir);
+  const p = resolvePath(realDir, name);
   // Containment first: a name that escapes the job directory is refused whether or not the target exists.
-  if (!p.startsWith(realpathSync(jobDir) + sep)) throw new CliError("ISOLATION_UNVERIFIED");
-  if (!existsSync(p)) return null;
-  const st = lstatSync(p);
+  if (!p.startsWith(realDir + sep)) throw new CliError("ISOLATION_UNVERIFIED");
+  let st;
+  try {
+    st = lstatSync(p);
+  } catch (err: unknown) {
+    if (typeof err === "object" && err !== null && "code" in err && (err as { code: unknown }).code === "ENOENT") return null;
+    throw err;
+  }
   if (st.isSymbolicLink() || !st.isFile()) throw new CliError("ISOLATION_UNVERIFIED");
-  if (!realpathSync(p).startsWith(realpathSync(jobDir) + sep)) throw new CliError("ISOLATION_UNVERIFIED");
+  if (!realpathSync(p).startsWith(realDir + sep)) throw new CliError("ISOLATION_UNVERIFIED");
   if (st.size > maxBytes) throw new CliError("OUTPUT_TOO_LARGE");
   return readFileSync(p, "utf8");
 }
