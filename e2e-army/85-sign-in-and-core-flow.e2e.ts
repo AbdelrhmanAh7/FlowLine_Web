@@ -30,6 +30,16 @@ async function signUpVerified(base: string, email: string) {
   if (!v.ok) throw new Error(`verify ${v.status}`);
 }
 
+test("@issue-357 AC1: visitors see the hero demo poster in Arabic and English", { tags: ["feat:fl-landing", "feat:fl-i18n-rtl"] }, async ({ app, browser, screen }) => {
+  for (const locale of ["ar", "en"]) {
+    await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: locale }]);
+    await app.open("/");
+    await expect(screen.getByTestId("landing-demo")).toBeVisible();
+    await expect(screen.getByTestId("landing-demo-poster")).toHaveAttribute("fetchpriority", "high");
+    expect(await browser.evaluate(() => document.documentElement.dir)).toBe(locale === "ar" ? "rtl" : "ltr");
+  }
+});
+
 test("@issue-85 landing: the page shows the product promise and a call to action", { tags: ["feat:fl-landing"] }, async ({ app, screen, browser }) => {
   await browser.setCookies([{ url: app.baseUrl!, name: "fl_locale", value: "en" }]);
   await app.open("/");
