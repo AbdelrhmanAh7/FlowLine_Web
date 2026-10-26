@@ -433,3 +433,12 @@ Corrected full-tier verification to inspect matching-SHA dispatch jobs rather th
 ## Malformed percent-escapes answer 404 (issue #426, supersedes part of #380) — 2026-10-26
 
 `src/proxy.ts` (Next.js 16's name for middleware) answers a path or query string with an undecodable percent-escape with a 404 (bounded JSON for `/api/*`, the not-found page otherwise) instead of a framework error. Evidence: `docs/evidence/426/EVIDENCE.md`.
+
+## Guard copy-editor.tsx core logic and publish errors (issue #471, split from #329) — 2026-10-26
+
+Resolved CodeRabbit review finding `5d6aad501027` from PR #329 (parent #228) concerning unauthorized modifications to `src/app/admin/copy/copy-editor.tsx`:
+- Verified `copy-editor.tsx` adheres strictly to architectural boundaries without inline `handleWriteError`, unsafe `errors.*` key interpolation, or ad-hoc retry buttons.
+- Documented and verified that `src/app/admin/copy/copy-errors.ts` (delivered in parent #180 / PR #322) cleanly handles all write errors including publish fallbacks (500 INTERNAL, STEP_UP_REQUIRED, validation errors, revision conflicts, and network failures) without touching editor component core logic.
+- Added permanent regression guard and publish error suite in `tests/unit/admin/copy/copy-editor-publish-errors.test.ts` (7/7 passed).
+- Evidence: `docs/evidence/471/EVIDENCE.md`.
+
