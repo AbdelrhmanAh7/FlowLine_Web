@@ -5,7 +5,7 @@
 - **Parent Issue**: #124 (`staging: auto-verify sign-ups for automated testing`)
 - **Supersedes**: part of PR #135
 - **Branch**: `ai/337` (clean branch off `origin/main`)
-- **Tested Commit SHA**: `3ae0ca98`
+- **Tested Commit SHA**: `8e678be0` (verified 2026-10-27; deletion in `3ae0ca98`)
 - **Originating Sentry Issue**: None (internal QA finding split from PR #135)
 - **User-Facing**: No (`E2E: not needed — test-only hygiene chore and deletion guard; no user-facing flows changed`)
 
