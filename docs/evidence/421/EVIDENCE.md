@@ -6,8 +6,6 @@
 - Originating Sentry issue: None / N/A (E2E gate finding and QA review rounds 1 & 2 from split PR #410, parent #409: https://github.com/AbdelrhmanAh7/FlowLine_Web/pull/410#issuecomment-6342555610)
 - Supersedes part of #410.
 
-> **ar.json discrepancy note (issue #463):** The issue #463 brief specified the Arabic label as `'صفقة مكسوبة ← عرض سعر Mizano'` (U+2190, leftwards arrow). However, commit cd7bad12 (issue #454, part 1/2) went through multiple iterations and settled on `'صفقة مكسوبة — عرض سعر Mizano'` (U+2014, em-dash) as the canonical value in `src/i18n/messages/ar.json`. Per the spec, ar.json is the source of truth; this document quotes the em-dash value throughout. See also: state/rnd.json.
-
 ---
 
 ## Problem Summary & Root Cause
@@ -19,9 +17,9 @@ However:
 3. Playwright `getByRole` calls in the E2E test used bare strings instead of options objects (`{ name: 'Use template' }`).
 4. QA Review Round 2 flagged: `src/i18n/messages/ar.json:2371`: Ensure the Arabic translation for the Mizano template consistently uses an em-dash (`—`, U+2014) instead of a regular hyphen (`-`, U+002D) in node labels (`customer`, `quote`, `notify`).
 
-> **Bidi note:** U+2192 (→) is not bidi-mirrored (Unicode property Bidi_Mirrored=No), so in RTL text it still points right, against the reading direction. That is why directional arrows were eliminated from the Arabic template name; the em-dash (`—`, U+2014) is direction-neutral and reads correctly in both LTR and RTL contexts.
+> **Bidi note:** U+2192 (→) is not bidi-mirrored (Unicode property Bidi_Mirrored=No), so in RTL text it still points right, against the reading direction; the em-dash (—, U+2014) is used instead.
 
-> **Brand-name convention:** 'Mizano' and 'Slack' are intentionally kept in Latin script by convention; they are not translated or transliterated into Arabic.
+> **Brand-name convention:** Brand names 'Mizano' and 'Slack' are intentionally kept in Latin script by convention.
 
 ### Root Cause & Fix Locations
 - **`src/engine/design-templates.ts`**:
@@ -41,10 +39,10 @@ However:
 
 ## Numbered Acceptance Criteria
 
-- **AC1:** In the template gallery (`/w/[slug]/templates`), the card `data-testid="template-deal-won-mizano-quote"` is visible and offers "Deal won — Mizano quote" with a valid accessible button `getByRole('button', { name: 'Use template' })`.
-- **AC2:** When the user locale is Arabic (`fl_locale=ar`), document direction is `rtl`, the template card renders Arabic title `"صفقة مكسوبة — عرض سعر Mizano"` using an em-dash (`—`, U+2014), with translations for all nodes under `designTemplates.deal-won-mizano-quote` in `src/i18n/messages/ar.json`.
+- **AC1:** In the template gallery (`/w/[slug]/templates`), the card `data-testid="template-deal-won-mizano-quote"` is visible and offers "Deal won → Mizano quote" with a valid accessible button `getByRole('button', { name: 'Use template' })`.
+- **AC2:** When the user locale is Arabic (`fl_locale=ar`), document direction is `rtl`, the template card renders Arabic title `"صفقة مكسوبة — عرض سعر Mizano"` using an em-dash (`—`, U+2014), and translations for all nodes exist under `designTemplates.deal-won-mizano-quote` in `src/i18n/messages/ar.json`.
 - **AC3:** In `src/i18n/messages/ar.json`, the node label for `customer` uses an em-dash (`—`, U+2014) rather than a regular hyphen (`-`, U+002D), matching `"Mizano — إنشاء عميل (يحتاج موافقة)"`, with `quote` and `notify` labels also adhering to this standard (no ASCII hyphen).
-- **AC4:** Clicking "Use template" creates a new flow redirecting to `/w/[slug]/flows/[flowId]`, with flow name `"Deal won — Mizano quote"`, and canvas node labeled `"Mizano — Create customer (needs approval)"` with approval required (`requireApproval: true`).
+- **AC4:** Clicking "Use template" creates a new flow redirecting to `/w/[slug]/flows/[flowId]`, with flow name `"Deal won → Mizano quote"`, and canvas node labeled `"Mizano — Create customer (needs approval)"` with approval required (`requireApproval: true`).
 - **AC5:** All integration actions (`mizano.create_customer`, `mizano.create_draft_quote`, `slack.post_message`) resolve cleanly against the provider registry via `missingTemplateActions(graph, registry) === []`.
 - **AC6:** Unit and integration tests verify the template definition and i18n keys; regression test demonstrates failure on base where the template and `designTemplates` translations are missing, and passes on head.
 
@@ -55,9 +53,9 @@ However:
 | AC | Requirement | Command / Test | Exit Code | Observed Result |
 |---|---|---|---|---|
 | **AC1** | E2E gallery card & accessible button | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC1` | 0 | `getByTestId("template-deal-won-mizano-quote")` and `getByRole("button", { name: "Use template" })` verified |
-| **AC2** | Arabic localization and RTL consistency | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC2` + `tests/unit/i18n.test.ts` | 0 | `dir="rtl"` asserted; title `"صفقة مكسوبة — عرض سعر Mizano"` with em-dash; no directional arrow |
+| **AC2** | Arabic localization and RTL consistency | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC2` + `tests/unit/i18n.test.ts` | 0 | `dir="rtl"` asserted; title `"صفقة مكسوبة — عرض سعر Mizano"` without arrows |
 | **AC3** | Arabic em-dash vs hyphen in node labels | `pnpm vitest run tests/unit/i18n.test.ts` | 0 | 19/19 passed; verifies `customer`, `quote`, `notify` contain `—` and not `-` |
-| **AC4** | Flow creation with approval step | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC3` | 0 | Flow created with name `"Deal won — Mizano quote"` and node `"Mizano — Create customer (needs approval)"` |
+| **AC4** | Flow creation with approval step | `e2e-army/147-mizano-create-customer-and-quote.e2e.ts` `@issue-421 AC3` | 0 | Flow created with name `"Deal won → Mizano quote"` and node `"Mizano — Create customer (needs approval)"` |
 | **AC5** | Action dependencies and registry resolution | `pnpm vitest run tests/unit/template-actions.test.ts` | 0 | 7/7 tests passed; `missingTemplateActions` returns `[]`; approval step verified |
 | **AC1, AC4, AC5** | Graph wiring, availability filtering, and approval gate execution | `pnpm vitest run tests/unit/deal-won-mizano-template.test.ts` | 0 | 8/8 tests passed in 9ms |
 | **AC2, AC6** | Template step labels and names in Arabic and English | `pnpm vitest run tests/unit/i18n-content-text.test.ts` | 0 | 44/44 tests passed (covers all `DESIGN_TEMPLATES` and node translations) |
@@ -72,15 +70,15 @@ However:
 When `deal-won-mizano-quote` was registered in `DESIGN_TEMPLATES` in `src/engine/design-templates.ts` before the message catalogues were populated with `designTemplates.deal-won-mizano-quote`, `pnpm vitest run tests/unit/i18n-content-text.test.ts` failed with exit code 1:
 ```
  FAIL  |unit| tests/unit/i18n-content-text.test.ts > template step labels and names > deal-won-mizano-quote: every step has an Arabic label; English is the template's own text
-AssertionError: expected 'Deal won — Mizano quote' to match /[؀-ۿ]/
+AssertionError: expected 'Deal won → Mizano quote' to match /[؀-ۿ]/
 - Expected: /[؀-ۿ]/
-+ Received: "Deal won — Mizano quote"
++ Received: "Deal won → Mizano quote"
  ❯ tests/unit/i18n-content-text.test.ts:46:37
 
  FAIL  |unit| tests/unit/i18n-content-text.test.ts > template step labels and names > Arabic creation translates only the name and step labels, never ids, config or edges
-AssertionError: expected 'Deal won — Mizano quote' to match /[؀-ۿ]/
+AssertionError: expected 'Deal won → Mizano quote' to match /[؀-ۿ]/
 - Expected: /[؀-ۿ]/
-+ Received: "Deal won — Mizano quote"
++ Received: "Deal won → Mizano quote"
  ❯ tests/unit/i18n-content-text.test.ts:78:25
 
 Test Files  1 failed (1)
@@ -104,9 +102,9 @@ Upon adding `deal-won-mizano-quote` to `DESIGN_TEMPLATES` and `designTemplates.d
 ## Changed Covering Tests
 
 - `e2e-army/147-mizano-create-customer-and-quote.e2e.ts`:
-  - `@issue-421 AC1: the gallery offers 'Deal won — Mizano quote' with a Use template button`
+  - `@issue-421 AC1: the gallery offers 'Deal won → Mizano quote' with a Use template button`
   - `@issue-421 AC2: the template is offered in Arabic and the page is right-to-left`
-  - `@issue-421 AC3: using 'Deal won — Mizano quote' creates an editable flow with the approval step`
+  - `@issue-421 AC3: using 'Deal won → Mizano quote' creates an editable flow with the approval step`
 - `tests/unit/deal-won-mizano-template.test.ts`:
   - 8 unit tests covering real provider registry action resolution, availability helpers, missing connections validation, approval requirement on customer step, waiting_approval pause, rejection abort, approved execution with two-decimal numbers, and non-won deal handling.
 - `tests/unit/template-actions.test.ts`:
@@ -123,4 +121,3 @@ Upon adding `deal-won-mizano-quote` to `DESIGN_TEMPLATES` and `designTemplates.d
 - `systematic-debugging`: Identified root cause of missing template definition, missing i18n translation, Playwright `getByRole` parameter format, and em-dash vs hyphen distinction in Arabic translations.
 - `tdd`: Added regression unit tests verifying Arabic translation, em-dash character presence, and template registration in unit test files.
 - `verification-before-completion`: Verified with typecheck, lint, vitest unit suite, exit codes, and evidence logs.
-- `model-effort-routing`: Model and effort stated at the top of this document.
