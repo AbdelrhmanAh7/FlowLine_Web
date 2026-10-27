@@ -1,8 +1,8 @@
 # FlowLine architecture
 
-FlowLine is an Arabic-first visual workflow application built with Next.js 16 App Router, React, and a separate execution worker. The Stage 1 journey in the charter at the top of `AGENTS.md` is to sign in with email and password, enter a default workspace, choose a template or connect three canvas nodes (Input/Trigger → AI Step → Output Action), click Run against a configured real AI provider, and inspect the output. PostgreSQL stores the graph, its execution snapshot, and each run's results. Stage 1 targets sign-in within 60 seconds and output within three minutes; these are goals, not verified timings.
+FlowLine is an Arabic-first visual workflow application built with Next.js 16 App Router, React, and a separate execution worker. The Stage 1 journey is to sign in with email and password, enter a default workspace, choose a template or connect three canvas nodes (Input/Trigger → AI Step → Output Action), click Run against a configured real AI provider, and inspect the output. PostgreSQL stores the graph, its execution snapshot, and each run's results. Stage 1 targets sign-in within 60 seconds and output within three minutes; these are goals stated in owner planning documents, not verified timings, and no single committed file contains the full charter text.
 
-Code reference: `1eceed2bd7093df29b77aecabf161bda0f351754`. Stage 1 scope (charter) and contributor rules both live in `AGENTS.md`.
+Code reference: `1eceed2bd7093df29b77aecabf161bda0f351754`. Contributor rules live in `AGENTS.md`; the implementation scope matrix is in `SCOPE_MATRIX.md`.
 The current `src/app/app/page.tsx` still redirects users without completed onboarding or a workspace to onboarding.
 `src/lib/auth.ts` requires email verification, and `src/server/beta.ts` can enforce invitation-only sign-up. The charter's frictionless entry is a target, not the current universal behavior.
 
@@ -54,7 +54,7 @@ sequenceDiagram
   participant H as worker/handlers.ts
   participant P as AI hub or integration adapter
   U->>B: Click Run, startRun()
-  Note over B: Check online, role, conflicts, validation, active run; lock click
+  Note over B: Check online, role, conflicts, validation, active run, then lock click
   opt Pending local edits
     B->>A: PUT /api/flows/{fid} via use-persistence.ts
     A->>A: requireUser(), requireFlow(flow.edit)
@@ -72,10 +72,10 @@ sequenceDiagram
   S->>D: pg_notify(flowline_runs, run id), commit
   S-->>A: Run and duplicate flag
   A-->>B: 202 queued run, or 200 existing duplicate
-  Note over B,S: Invalid graph returns 422; rejected requests do not reach execution
+  Note over B,S: Invalid graph returns 422. Rejected requests do not reach execution
   D-->>W: Notification or next poll finds queued work
   W->>D: claimNextRun(), mark running, acquire lease
-  W->>D: Load pinned flow_version, workspace, prior steps; recheck actor access
+  W->>D: Load pinned flow_version, workspace, prior steps, then recheck actor access
   W->>E: executeGraph(graph, input, handler=createHandler(context))
   loop Each ready node, subject to dependencies
     E->>W: onStepStart()
@@ -109,8 +109,8 @@ Retries, cancellation, stale-worker recovery, and approval or uncertain-outcome 
 
 ## Modules and Stage 1 scope
 
-ACTIVE means the charter permits work for the core journey. FROZEN means existing code stays, with no expansion until Stage 1 has ten active external users.
-The charter allows frozen-path edits only for build-breaking imports. Status does not certify live provider behavior or disable existing modules.
+ACTIVE means work on that module is in scope for the core Stage 1 journey. FROZEN means existing code stays with no feature expansion; this table is the authoritative statement of status for this document.
+The 10-active-external-users threshold for unfreezing modules is an owner planning target; no committed file records it. Frozen-path edits are allowed only for build-breaking imports. Status does not certify live provider behavior or disable existing modules.
 
 | Module | Responsibility | Key files | Stage 1 status |
 | --- | --- | --- | --- |
