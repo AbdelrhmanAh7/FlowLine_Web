@@ -25,9 +25,13 @@ const PARENT = process.env["DV2_02_PARENT"] ? resolve(process.env["DV2_02_PARENT
 const PRIMARY = process.env["DV2_02_PRIMARY_ROOT"] ? resolve(process.env["DV2_02_PRIMARY_ROOT"]) : resolve(PARENT, "FlowLine");
 const localRequire = createRequire(resolve(WORKTREE, "package.json"));
 // DV2_02_CANDIDATE_SHA: the git SHA whose src/server/crypto.ts the verifier checks against the
-// working-tree copy. When unset, the source-match check is skipped (for local variants where
-// the crypto module has diverged from the historical snapshot).
-export const CANDIDATE_SHA: string | undefined = process.env["DV2_02_CANDIDATE_SHA"] ?? "9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d";
+// working-tree copy. When set to 'skip'/'none'/'' or unset, the source-match check is skipped
+// or can be pinned to a specific SHA.
+const rawCandidateSha = process.env["DV2_02_CANDIDATE_SHA"];
+export const CANDIDATE_SHA: string | undefined =
+  rawCandidateSha === "skip" || rawCandidateSha === "none" || rawCandidateSha === ""
+    ? undefined
+    : (rawCandidateSha ?? "9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d");
 export const EXPOSED_WORKSPACE_KEY_ID = "cf55e2d177c9";
 const DB_NAME = /^flowline_test(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?$/;
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -315,10 +319,15 @@ export function auditNamedEnvironments(read: (name: typeof NAMED_FILES[number]) 
 function checkedSource() {
   const worktreeBaseSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: WORKTREE, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
   if (!CANDIDATE_SHA) {
-    // Source check skipped: DV2_02_CANDIDATE_SHA not set.
-    return { candidateSha: undefined as unknown as string, worktreeBaseSha, cryptoSourceSha256: "skipped" };
+    // Source check skipped: DV2_02_CANDIDATE_SHA not set or set to skip/none.
+    return { candidateSha: "skipped", worktreeBaseSha, cryptoSourceSha256: "skipped" };
   }
-  const expected = execFileSync("git", ["show", `${CANDIDATE_SHA}:src/server/crypto.ts`], { cwd: WORKTREE, stdio: ["ignore", "pipe", "ignore"] });
+  let expected: Buffer;
+  try {
+    expected = execFileSync("git", ["show", `${CANDIDATE_SHA}:src/server/crypto.ts`], { cwd: WORKTREE, stdio: ["ignore", "pipe", "ignore"] });
+  } catch {
+    throw new Error(`cannot inspect crypto source at candidate SHA ${CANDIDATE_SHA}`);
+  }
   const actual = readFileSync(resolve(WORKTREE, "src/server/crypto.ts"));
   if (expected.toString().replaceAll("\r\n", "\n") !== actual.toString().replaceAll("\r\n", "\n")) throw new Error("candidate crypto source mismatch");
   return { candidateSha: CANDIDATE_SHA, worktreeBaseSha, cryptoSourceSha256: createHash("sha256").update(expected).digest("hex") };
