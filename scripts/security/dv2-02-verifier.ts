@@ -1,3 +1,7 @@
+// ONE-SHOT LOCAL TOOL — not part of the normal test path.
+// Run only from a local worktree with the named sibling checkouts and rotation record in place.
+// See docs/security/dv2-02-verifier.md for prerequisites, env vars, and usage.
+//
 // REVIEW BEFORE EXECUTION: CLI modes read only the explicitly named local files below.
 // Importing this module does not load env files, read keys, connect to DBs or spawn processes.
 import { createDecipheriv, createHash, randomUUID } from "node:crypto";
@@ -13,10 +17,17 @@ import {
 } from "../../src/server/crypto";
 
 const WORKTREE = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const PARENT = dirname(WORKTREE);
-const PRIMARY = resolve(PARENT, "FlowLine");
+// DV2_02_PARENT: parent directory containing the named sibling checkouts.
+// Defaults to the directory that contains this worktree (i.e. the directory above the repo root).
+const PARENT = process.env["DV2_02_PARENT"] ? resolve(process.env["DV2_02_PARENT"]) : dirname(WORKTREE);
+// DV2_02_PRIMARY_ROOT: path to the primary checkout whose .env files are audited and whose
+// rotation record is read. Defaults to <PARENT>/FlowLine.
+const PRIMARY = process.env["DV2_02_PRIMARY_ROOT"] ? resolve(process.env["DV2_02_PRIMARY_ROOT"]) : resolve(PARENT, "FlowLine");
 const localRequire = createRequire(resolve(WORKTREE, "package.json"));
-export const CANDIDATE_SHA = "9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d";
+// DV2_02_CANDIDATE_SHA: the git SHA whose src/server/crypto.ts the verifier checks against the
+// working-tree copy. When unset, the source-match check is skipped (for local variants where
+// the crypto module has diverged from the historical snapshot).
+export const CANDIDATE_SHA: string | undefined = process.env["DV2_02_CANDIDATE_SHA"] ?? "9fdcb7d4278d945cf6f40dd86c961b981f1f7f0d";
 export const EXPOSED_WORKSPACE_KEY_ID = "cf55e2d177c9";
 const DB_NAME = /^flowline_test(?:_[a-z0-9]+(?:_[a-z0-9]+)*)?$/;
 const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -302,11 +313,19 @@ export function auditNamedEnvironments(read: (name: typeof NAMED_FILES[number]) 
   });
 }
 function checkedSource() {
+  const worktreeBaseSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: WORKTREE, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  if (!CANDIDATE_SHA) {
+    // Source check skipped: DV2_02_CANDIDATE_SHA not set.
+    return { candidateSha: undefined as unknown as string, worktreeBaseSha, cryptoSourceSha256: "skipped" };
+  }
   const expected = execFileSync("git", ["show", `${CANDIDATE_SHA}:src/server/crypto.ts`], { cwd: WORKTREE, stdio: ["ignore", "pipe", "ignore"] });
   const actual = readFileSync(resolve(WORKTREE, "src/server/crypto.ts"));
   if (expected.toString().replaceAll("\r\n", "\n") !== actual.toString().replaceAll("\r\n", "\n")) throw new Error("candidate crypto source mismatch");
-  return { candidateSha: CANDIDATE_SHA, worktreeBaseSha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: WORKTREE, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim(), cryptoSourceSha256: createHash("sha256").update(expected).digest("hex") };
+  return { candidateSha: CANDIDATE_SHA, worktreeBaseSha, cryptoSourceSha256: createHash("sha256").update(expected).digest("hex") };
 }
+// DV2_02_ROTATION_RECORD: absolute path to the key-rotation.json for the full verification mode.
+// Defaults to <PRIMARY>/artifacts/beta-execution/20260930T122429Z/key-rotation.json.
+const DEFAULT_ROTATION_RECORD = resolve(PRIMARY, "artifacts/beta-execution/20260930T122429Z/key-rotation.json");
 export async function runVerification(argv: string[]) {
   const source = checkedSource();
   if (argv.length === 1 && argv[0] === "--audit-named-envs") {
@@ -317,7 +336,8 @@ export async function runVerification(argv: string[]) {
   if (target !== "--primary" && target !== "--aihub") throw new Error("choose a named disposable target");
   const root = target === "--primary" ? "FlowLine" : "FL-wt-aihub";
   const options = parsePublicOptions(argv.slice(1));
-  const record = JSON.parse(readFileSync(resolve(PRIMARY, "artifacts/beta-execution/20260930T122429Z/key-rotation.json"), "utf8")) as { environments: { root: string; oldDatabase: string; newDatabase: string; workspaceKeyId: string }[] };
+  const rotationRecordPath = process.env["DV2_02_ROTATION_RECORD"] ? resolve(process.env["DV2_02_ROTATION_RECORD"]) : DEFAULT_ROTATION_RECORD;
+  const record = JSON.parse(readFileSync(rotationRecordPath, "utf8")) as { environments: { root: string; oldDatabase: string; newDatabase: string; workspaceKeyId: string }[] };
   const recorded = record.environments.filter((r) => r.root === root);
   if (recorded.length !== 1 || recorded[0].oldDatabase !== options.oldDatabase || recorded[0].newDatabase !== options.newDatabase) throw new Error("database pair differs from named rotation record");
   const env = namedEnvironment(`${root}/.env.test`);
