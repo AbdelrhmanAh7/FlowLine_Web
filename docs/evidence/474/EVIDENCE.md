@@ -15,6 +15,7 @@ Refs #474. Supersedes part of #385.
 Originating Sentry issue: none supplied; this is a documentation defect.
 
 Inspected application/base commit: `cd7bad12fb0f816ee04b525b82e2fee0bd8b83e2` (`origin/main` and initial HEAD).
+Tested branch commit SHA: `379a9c17ff4098e62d956002be9acc0632503839` (HEAD).
 Inspected historical evidence: `origin/ai/301` at `e5e510db81ac97bc935a433fd387fdc0e65a5cf0`, `docs/evidence/301/EVIDENCE.md`, AC4 verification row.
 Verification date: 2026-10-26. Environment: macOS, Node 26.10.0, pnpm 10.32.1 (package requires Node 24.x; local pnpm warns).
 Local checks below cover that application commit plus this documentation-only change.
@@ -22,6 +23,14 @@ Local checks below cover that application commit plus this documentation-only ch
 The historical row claims PASS from `pnpm vitest related --run --passWithNoTests ...` and a reference to an e2e file. Vitest does not execute the e2e-army scenarios. That command and exit code cannot establish AC4.
 
 `git ls-tree origin/main docs/evidence/301/EVIDENCE.md` returned no entry (exit 0). The source document `docs/evidence/301/EVIDENCE.md` is absent from main (it exists only on branch `ai/301` for PR #385). Per repository rules forbidding cross-issue path collisions and creating foreign evidence files on main, this PR only records the standalone correction and verification report here; `docs/evidence/301/EVIDENCE.md` is not modified here, and the review finding remains open on #385 until updated directly on that branch.
+
+### Review Round 1 Resolution (PR #482)
+
+CodeRabbit / Claude Haiku 5.5 flagged on commit `c3c9bd42fa6d1966964bb1f499b7ae6c2c2d1082`:
+> The review finding targets the AC4 row in docs/evidence/301/EVIDENCE.md, but this PR does not change that row. The document itself says the row 'still needs updating on #385'. The issue's done-when ('this finding is resolved on a fresh branch off main') is not met by a new side document. Either land the correction against the row where it lives, or state explicitly that this PR only records the correction and the finding remains open on #385.
+
+Resolution:
+As recommended by the reviewer, this PR explicitly records that it only records the standalone correction on `main`, `docs/evidence/301/EVIDENCE.md` is not modified here (preventing cross-issue branch collisions), and the review finding remains open on #385 until updated directly on branch `ai/301`. This was codified in AC4 of this document and in `docs/implementation/PHASE4_BETA_REPORT.md`.
 
 ## Corrected historical AC4 entry
 
