@@ -74,6 +74,8 @@ on:
     !startsWith(github.event.pull_request.head.ref, 'ai/')
   ```
   The job explicitly filters on `head.repo.full_name == github.repository`. Any PR originating from a fork evaluates to `false` and allocates no runner.
+- **Token-presence gate only (`claude.yml:123-129`, corrected from earlier overclaim)**:
+  The `review` job step "Gate (token present)" checks only whether `CLAUDE_CODE_OAUTH_TOKEN` is set (`HAS_TOKEN = "true"`). It does **not** query the event actor's collaborator permissions. The `claude` (interactive mention) job performs that collaborator write-permission check; the `review` job relies on the job-level `if:` filter above plus GitHub Actions' built-in secret withholding from forks.
 - **GitHub Actions Secret Isolation**:
   Because the trigger is standard `pull_request` (not `pull_request_target`), GitHub Actions never provisions repository secrets (including `CLAUDE_CODE_OAUTH_TOKEN`) to workflows triggered from forks.
 - **Permissions (`claude.yml:116-121`)**:
@@ -83,12 +85,28 @@ on:
 
 ---
 
-## 4. Verification and Automated Invariants
+## 4. Job Timeouts (gate.yml)
+
+| Job | Timeout | Tier | Note |
+|---|---|---|---|
+| `changes` | 5 min | fast + full | `gate.yml:42` |
+| `checks` | 5 min | fast + full | `gate.yml:99` |
+| `chromium` | 5 min | fast + full | `gate.yml:160` — **P1 finding**: same cap applies on `workflow_dispatch tier=full`, where chromium also installs dependencies and runs every Playwright spec. May be insufficient. See `docs/evidence/298/EVIDENCE.md`. |
+| `firefox` | 40 min | full only | `gate.yml:194` — full-tier browser install + full spec run |
+| `webkit` | 40 min | full only | `gate.yml:227` — full-tier browser install + full spec run |
+| `gate` | 5 min | fast + full | `gate.yml:263` — combiner step only |
+
+---
+
+## 5. Verification and Automated Invariants
 
 Automated unit tests in `tests/unit/ci-workflows.test.ts` permanently enforce:
 1. Complete exclusion of `pull_request_target` from all workflow files.
 2. Exact trigger event allowlists for `claude.yml`.
-3. Collaborator write-permission and fork repository validation in the `claude` job gate step.
+3. Collaborator write-permission and fork repository validation in the `claude` (interactive) job gate step.
 4. Internal repository filtering (`head.repo.full_name == github.repository`) in the `review` job.
-5. Strict step gating on `steps.gate.outputs.run == 'true'`.
-6. Negative controls rejecting insecure workflow variations.
+5. That the `review` job does NOT check collaborator write permissions (token-presence gate only).
+6. Strict step gating on `steps.gate.outputs.run == 'true'`.
+7. Negative controls rejecting insecure workflow variations.
+8. Fast-tier jobs (`changes`, `checks`, `chromium`, `gate`) have `timeout-minutes: 5`.
+9. Full-tier jobs (`firefox`, `webkit`) have `timeout-minutes: 40`.

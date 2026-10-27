@@ -332,6 +332,24 @@ describe("gate.yml keeps every fast-tier job under 5 minutes", () => {
   });
 });
 
+// AC (issue #298): The full-tier-only jobs (firefox, webkit) run only via workflow_dispatch tier=full and are NOT
+// constrained to 5 minutes — they install browsers and run the full Playwright suite, which legitimately needs more
+// time. The five-minute rule applies only to the fast-tier jobs (changes, checks, chromium, gate).
+// Chromium on the fast tier also runs at 5 min: it runs only @critical/@cross-browser; the full tier adds every spec.
+// P1 finding from #298: chromium is capped at 5 min unconditionally (gate.yml:160), which may be tight for
+// workflow_dispatch tier=full when chromium installs dependencies and runs every spec — see docs/evidence/298/EVIDENCE.md.
+describe("gate.yml full-tier jobs (firefox, webkit) have a relaxed timeout appropriate for browser test suites", () => {
+  const byJob = jobs(read(".github/workflows/gate.yml"));
+
+  it.each(["firefox", "webkit"])("%s has timeout-minutes: 40 (full tier only)", (job) => {
+    expect(byJob[job]).toMatch(/^ {4}timeout-minutes: 40$/m);
+  });
+
+  it("chromium has timeout-minutes: 5 (applies to both fast and full tiers; see P1 finding in docs/evidence/298/EVIDENCE.md)", () => {
+    expect(byJob.chromium).toMatch(/^ {4}timeout-minutes: 5$/m);
+  });
+});
+
 describe("gate.yml reports every `checks` leg on its own", () => {
   const checks = jobs(read(".github/workflows/gate.yml")).checks;
   // Matrix entries look like `- { part: integration 1/3, kind: integration, shard: 1/3, report: checks-integration-1of3 }`.
@@ -680,6 +698,23 @@ describe("workflow triggers, checkout refs, and fork isolation invariants (#298)
     ])("%s", (_name, brokenGate, brokenClaude) => {
       expect(checkWorkflowUntrustedCodeSafety(brokenGate, brokenClaude).length).toBeGreaterThan(0);
     });
+  });
+
+  // AC: The `review` job does not check collaborator write permissions — it only gates on HAS_TOKEN (token presence).
+  // The `claude` (interactive) job checks collaborator write access; `review` relies on the job-level `if:` condition
+  // filtering out fork PRs (head.repo.full_name == github.repository) and on GitHub Actions withholding secrets from
+  // forks. Claiming the review job "checks writer access" is incorrect and could mislead security reviewers (#298).
+  it("review job gates on token presence (HAS_TOKEN) only — it does NOT check collaborator write permissions", () => {
+    const reviewJob = claudeJobs.review;
+    expect(reviewJob).toBeDefined();
+
+    // review gates only on token presence
+    expect(reviewJob).toContain("HAS_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN != '' }}");
+    expect(reviewJob).toMatch(/\[\s*"\$HAS_TOKEN"\s*=\s*"true"\s*\]|\$HAS_TOKEN.*=.*"true"/);
+
+    // review does NOT call the collaborator permission API (that is the claude interactive job's gate)
+    expect(reviewJob).not.toContain("repos/$REPO/collaborators/$ACTOR/permission");
+    expect(reviewJob).not.toMatch(/case "\$perm" in admin\|maintain\|write\)/);
   });
 });
 
