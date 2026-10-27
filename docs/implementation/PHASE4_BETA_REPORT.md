@@ -380,7 +380,7 @@ Evidence documented in `docs/evidence/335/EVIDENCE.md`.
 ## i18n: RTL arrow consistency in Arabic gallery template string (issue #340) — 2026-10-23
 
 Resolved non-blocking P3 localization review finding from PR #334 on `deal-won-mizano-quote`:
-- Updated `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:361` from `"صفقة مكسوبة ← عرض سعر Mizano"` to `"صفقة مكسوبة → عرض سعر Mizano"`, replacing the leftwards arrow (`←`, U+2190) with the rightwards arrow (`→`, U+2192) for Arabic RTL typographic consistency.
+- Updated `localTemplates.deal-won-mizano-quote.name` in `src/i18n/messages/ar.json:361` to `"صفقة مكسوبة — عرض سعر Mizano"` matching ar.json em-dash value, which has no directional bias and reads correctly in RTL.
 - Added test coverage in `tests/unit/i18n-content-text.test.ts` and `tests/unit/i18n.test.ts` (`local template localization consistency (#340)`), asserting exact name equality and guarding against misplaced `←` arrows across all local templates.
 - Demonstrated regression failure on base state (3 failures, rc=1) and 61/61 passes on head state (rc=0).
 - Evidence documented in `docs/evidence/340/EVIDENCE.md`.
