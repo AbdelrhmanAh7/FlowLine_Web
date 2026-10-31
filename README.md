@@ -1,3 +1,5 @@
+> **This repository is legacy.** FlowLine continues at https://github.com/AbdelrhmanAh7/flowline. A full backup bundle was taken on 2026-10-31.
+
 # Flowline
 
 Visual workflow automation with AI agents. You build flows on a canvas, run them on a real backend worker, and inspect
